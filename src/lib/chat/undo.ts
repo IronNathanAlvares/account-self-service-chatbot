@@ -17,7 +17,7 @@ export async function undoLastChange(accountId: string, deps: RouterDeps): Promi
   const notify = async (summary: string): Promise<boolean> => {
     const snapshot = await deps.repo.getAccountContext(accountId);
     if (!snapshot) return false;
-    const r = await deps.notifier.send({ accountId, changedBy: "account_holder", changeSummary: summary, accountSnapshot: snapshot });
+    const r = await deps.notifier.send({ accountId, changedBy: "account_holder", changeSummary: summary, accountSnapshot: snapshot, subject: "A recent change on your account was reverted" });
     return r.sent || r.notificationId.length > 0;
   };
 

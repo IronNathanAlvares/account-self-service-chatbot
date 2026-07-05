@@ -51,7 +51,7 @@ export class ResendNotifier implements Notifier {
       from: this.fromEmail,
       to: recipient,
       cc: notification.ccOverride,
-      subject: "An update was made to your account",
+      subject: notification.subject ?? "An update was made to your account",
       text: GENERIC_BODY,
       attachments: [
         {

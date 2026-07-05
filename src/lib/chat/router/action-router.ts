@@ -59,6 +59,31 @@ function needInfo(
   return { action: "clarify", success: false, reply, missingFields, pending };
 }
 
+// Non-sensitive subject line by change category. Never includes the changed
+// value (amount, phone, name, ...) so the email body stays free of detail.
+function subjectForChange(action: ChatAction): string {
+  switch (action) {
+    case "mock_payment":
+      return "A payment was recorded on your account";
+    case "create_promise_to_pay":
+      return "A promise to pay was created on your account";
+    case "add_related_person":
+      return "A person was added to your account";
+    case "update_related_person":
+      return "A person on your account was updated";
+    case "remove_related_person":
+      return "A person was removed from your account";
+    case "book_call_appointment":
+      return "A call appointment was booked";
+    case "update_preferred_contact_method":
+      return "Your preferred contact method was updated";
+    case "update_account_holder":
+      return "Your account details were updated";
+    default:
+      return "An update was made to your account";
+  }
+}
+
 // Find related people whose name contains the query (case-insensitive).
 function matchPeople(context: AccountContext, name: string): RelatedPerson[] {
   const q = name.trim().toLowerCase();
@@ -108,6 +133,8 @@ export async function handleIntent(
   }
 
   // Fetches the freshest snapshot and sends the redacted change notification.
+  // The subject is a non-sensitive category (never the changed value); all
+  // sensitive detail stays in the encrypted PDF.
   const notify = async (changeSummary: string, recipientOverride?: string, ccOverride?: string[]): Promise<boolean> => {
     const snapshot = (await repo.getAccountContext(accountId)) ?? context;
     const result = await notifier.send({
@@ -117,6 +144,7 @@ export async function handleIntent(
       accountSnapshot: snapshot,
       recipientOverride,
       ccOverride,
+      subject: subjectForChange(action),
     });
     return result.sent || result.notificationId.length > 0;
   };

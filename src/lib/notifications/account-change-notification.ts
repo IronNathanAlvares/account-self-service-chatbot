@@ -9,6 +9,8 @@ export type AccountChangeNotification = {
   recipientOverride?: string;
   /** Optional CC list (e.g. copy the account owner on a receipt). */
   ccOverride?: string[];
+  /** Non-sensitive category subject line (never contains changed values). */
+  subject?: string;
 };
 
 export type AccountChangeNotificationResult = {
