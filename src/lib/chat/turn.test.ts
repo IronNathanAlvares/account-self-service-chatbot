@@ -67,6 +67,18 @@ describe("handleConversationTurn", () => {
     expect(done.account?.account.balanceCents).toBe(before - 15000);
   });
 
+  it("handles a mid-confirmation correction", async () => {
+    const parser = new StubParser((msg) => intent("mock_payment", { amountCents: msg.includes("200") ? 20000 : 15000 }));
+
+    const ask = await handleConversationTurn(ACCOUNT_ID, "pay 150 now", undefined, parser, deps);
+    expect(ask.pending?.stage).toBe("confirm");
+
+    const corrected = await handleConversationTurn(ACCOUNT_ID, "no, make it 200", ask.pending, parser, deps);
+    expect(corrected.requiresConfirmation).toBe(true);
+    expect(corrected.pending?.fields.amountCents).toBe(20000);
+    expect(notifier.calls).toHaveLength(0);
+  });
+
   it("cancels a payment on no", async () => {
     const parser = new StubParser(() => intent("mock_payment", { amountCents: 15000 }));
     const ask = await handleConversationTurn(ACCOUNT_ID, "pay 150 now", undefined, parser, deps);

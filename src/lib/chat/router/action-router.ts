@@ -11,7 +11,9 @@ import {
   phoneSchema,
   relatedPersonInputSchema,
   validate,
+  type RelatedPersonInput,
 } from "@/lib/chat/validation/validators";
+import type { RelatedPerson } from "@/lib/account/types";
 
 // The deterministic core. It receives an already-parsed intent and executes it
 // against the repository, validating every field first and sending a redacted
@@ -55,6 +57,13 @@ function needInfo(
   return { action: "clarify", success: false, reply, missingFields, pending };
 }
 
+// Find related people whose name contains the query (case-insensitive).
+function matchPeople(context: AccountContext, name: string): RelatedPerson[] {
+  const q = name.trim().toLowerCase();
+  if (!q) return [];
+  return context.relatedPeople.filter((p) => p.name.toLowerCase().includes(q));
+}
+
 // Answer the specific detail the customer asked for, not a fixed field.
 function describeAccount(
   context: AccountContext,
@@ -74,7 +83,10 @@ function describeAccount(
   if (has("address", "postal", "where i live")) return `Your address on file is ${address}.`;
   if (has("name", "who am i")) return `The name on your account is ${a.accountHolderFirstName} ${a.accountHolderLastName}.`;
   if (has("reference", "account number", "ref")) return `Your account reference is ${a.reference}.`;
-  if (has("balance", "owe", "owing", "outstanding")) return `Your current balance is ${formatCents(a.balanceCents, a.currency)}.`;
+  if (has("balance", "owe", "owing", "outstanding")) {
+    const nudge = a.balanceCents > 0 ? " Would you like to make a payment or set up a promise to pay?" : "";
+    return `Your current balance is ${formatCents(a.balanceCents, a.currency)}.${nudge}`;
+  }
 
   return `Here's a quick summary: balance ${formatCents(a.balanceCents, a.currency)}, email ${a.email}, phone ${a.phone}. Ask me for any specific detail.`;
 }
@@ -178,6 +190,70 @@ export async function handleIntent(
       const person = await repo.addRelatedPerson(accountId, v.value);
       const queued = await notify(`Added related person ${person.name}`);
       return ok("add_related_person", `I've added ${person.name}${person.authorizedToAct ? " as an authorized representative" : ""}.`, { notificationQueued: queued });
+    }
+
+    case "update_related_person": {
+      const targetName = str(fields, "relatedPersonName");
+      if (!targetName) return needInfo("update_related_person", fields, "Whose details would you like to change?", ["name"]);
+
+      const matches = matchPeople(context, targetName);
+      if (matches.length === 0) return fail("update_related_person", `I couldn't find anyone called "${targetName}" on your account.`);
+      if (matches.length > 1) {
+        return needInfo("update_related_person", fields, `There are a few matches for "${targetName}": ${matches.map((m) => m.name).join(", ")}. Which one?`, ["name"]);
+      }
+      const person = matches[0];
+
+      const patch: Partial<RelatedPersonInput> = {};
+      const email = str(fields, "relatedPersonEmail");
+      const phone = str(fields, "relatedPersonPhone");
+      if (email !== undefined) {
+        const v = validate(emailSchema, email);
+        if (!v.ok) return fail("update_related_person", v.errors[0]);
+        patch.email = v.value;
+      }
+      if (phone !== undefined) {
+        const v = validate(phoneSchema, phone);
+        if (!v.ok) return fail("update_related_person", v.errors[0]);
+        patch.phone = v.value;
+      }
+      const relationship = str(fields, "relationship");
+      if (relationship !== undefined) patch.relationship = relationship;
+      const authorized = bool(fields, "authorizedToAct");
+      if (authorized !== undefined) patch.authorizedToAct = authorized;
+
+      if (Object.keys(patch).length === 0) {
+        return needInfo("update_related_person", { ...fields, relatedPersonName: person.name }, `What would you like to change about ${person.name} — their phone, email, relationship, or authorization?`, ["field"]);
+      }
+
+      const updated = await repo.updateRelatedPerson(accountId, person.id, patch);
+      const queued = await notify(`Updated related person ${person.name}: ${Object.keys(patch).join(", ")}`);
+      return ok("update_related_person", `Done — I've updated ${updated.name}'s ${Object.keys(patch).join(", ")}.`, { notificationQueued: queued });
+    }
+
+    case "remove_related_person": {
+      const targetName = str(fields, "relatedPersonName");
+      if (!targetName) return needInfo("remove_related_person", fields, "Who would you like to remove from your account?", ["name"]);
+
+      const matches = matchPeople(context, targetName);
+      if (matches.length === 0) return fail("remove_related_person", `I couldn't find anyone called "${targetName}" on your account.`);
+      if (matches.length > 1) {
+        return needInfo("remove_related_person", fields, `There are a few matches for "${targetName}": ${matches.map((m) => m.name).join(", ")}. Which one should I remove?`, ["name"]);
+      }
+      const person = matches[0];
+
+      if (!options.confirmed) {
+        return {
+          action: "remove_related_person",
+          success: false,
+          reply: `Just to confirm — remove ${person.name} from your account? This can't be undone from here.`,
+          requiresConfirmation: true,
+          pending: { action: "remove_related_person", fields: { relatedPersonName: person.name }, stage: "confirm" },
+        };
+      }
+
+      await repo.removeRelatedPerson(accountId, person.id);
+      const queued = await notify(`Removed related person ${person.name}`);
+      return ok("remove_related_person", `I've removed ${person.name} from your account.`, { notificationQueued: queued });
     }
 
     // ---- promise to pay ----------------------------------------------------

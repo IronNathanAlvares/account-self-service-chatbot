@@ -71,6 +71,32 @@ describe("chat action acceptance contracts", () => {
     expect(notifier.calls).toHaveLength(0);
   });
 
+  it("updates an existing related person's phone", async () => {
+    const result = await handleIntent(ACCOUNT_ID, intent("update_related_person", { relatedPersonName: "John", relatedPersonPhone: "+353830000000" }), deps);
+    expect(result.success).toBe(true);
+    const ctx = await repo.getAccountContext(ACCOUNT_ID);
+    expect(ctx?.relatedPeople.find((p) => p.name.includes("John"))?.phone).toBe("+353830000000");
+  });
+
+  it("asks which person when the name is ambiguous", async () => {
+    await repo.addRelatedPerson(ACCOUNT_ID, { name: "John Smith", email: "js@example.test", phone: "+353831111111", authorizedToAct: false });
+    const result = await handleIntent(ACCOUNT_ID, intent("update_related_person", { relatedPersonName: "John", relatedPersonPhone: "+353832222222" }), deps);
+    expect(result.success).toBe(false);
+    expect(result.reply.toLowerCase()).toContain("which one");
+    expect(result.pending?.stage).toBe("collect");
+  });
+
+  it("removes a related person only after confirmation", async () => {
+    const ask = await handleIntent(ACCOUNT_ID, intent("remove_related_person", { relatedPersonName: "John" }), deps);
+    expect(ask.requiresConfirmation).toBe(true);
+    expect(notifier.calls).toHaveLength(0);
+
+    const done = await handleIntent(ACCOUNT_ID, intent("remove_related_person", { relatedPersonName: "John Murphy" }), deps, { confirmed: true });
+    expect(done.success).toBe(true);
+    const ctx = await repo.getAccountContext(ACCOUNT_ID);
+    expect(ctx?.relatedPeople.some((p) => p.name === "John Murphy")).toBe(false);
+  });
+
   it("records a one-time promise to pay with amount and future due date", async () => {
     const result = await handleIntent(ACCOUNT_ID, intent("create_promise_to_pay", { amountCents: 50000, dueDate: "2026-08-01" }), deps);
 

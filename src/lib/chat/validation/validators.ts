@@ -44,6 +44,8 @@ export const addressInputSchema = z.object({
   country: z.string().trim().min(1),
 });
 
+export const relatedPersonPatchSchema = relatedPersonInputSchema.partial();
+
 export type RelatedPersonInput = z.infer<typeof relatedPersonInputSchema>;
 export type AddressInput = z.infer<typeof addressInputSchema>;
 

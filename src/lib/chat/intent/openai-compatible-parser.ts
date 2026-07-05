@@ -56,9 +56,11 @@ Rules:
 - PAYMENT vs PROMISE (important):
   * "pay 150 now", "pay 150 today", "make a payment of 150" -> mock_payment (immediate).
   * "can I pay 150 on the 1st", "I'll pay 150 next month", any FUTURE-dated intent to pay -> create_promise_to_pay.
-- ADD vs UPDATE person:
+- ADD vs UPDATE vs REMOVE person:
   * "add <name>", "add my brother", "<name> can act for me" -> add_related_person.
-  * "change/update <existing name>'s phone/email" -> update_related_person.
+  * "change/update <existing name>'s phone/email/relationship" -> update_related_person.
+    Here relatedPersonName is WHO to change; the other relatedPerson* fields are the NEW values.
+  * "remove <name>", "delete <name>", "take <name> off my account" -> remove_related_person.
 - Ambiguous -> action clarify. Off-topic -> action unsupported.`;
 
 export type OpenAICompatibleOptions = {
