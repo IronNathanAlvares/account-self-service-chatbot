@@ -105,17 +105,26 @@ function describeAccount(
     .filter(Boolean)
     .join(", ");
 
+  // Specific/compound concepts are checked first so generic words like
+  // "number" (in "reference number") or "due" (in "overdue") don't misfire.
+  if (has("reference", "account number", "account id", "ref number", " ref", " id")) return `Your account reference is ${a.reference}.`;
+  if (has("overdue", "past due", "days late", "how many days")) return `Your account is ${a.daysPastDue} days past due.`;
+  if (has("minimum", "min payment", "smallest")) return `Your minimum payment is ${formatCents(a.minimumPaymentCents, a.currency)}.`;
+  if (has("last payment", "previous payment", "recent payment")) return `Your last payment was ${formatCents(a.lastPaymentAmountCents, a.currency)} on ${a.lastPaymentDate}.`;
+  if (has("due date", "due by", "when is", "payment due")) return `Your payment is due on ${context.billing.dueDate}.`;
+  if (has("status")) return `Your account status is ${a.status}.`;
+  if (has("creditor", "who do i owe", "company", "who is this")) return `Your account is with ${a.creditorName}.`;
+  if (has("support", "customer service", "help line", "speak to someone", "agent number")) return `You can reach support on ${context.support.supportPhone} or ${context.support.supportEmail}.`;
   if (has("email")) return `The email on your account is ${a.email}.`;
-  if (has("phone", "mobile", "number")) return `The phone number on your account is ${a.phone}.`;
   if (has("address", "postal", "where i live")) return `Your address on file is ${address}.`;
   if (has("name", "who am i")) return `The name on your account is ${a.accountHolderFirstName} ${a.accountHolderLastName}.`;
-  if (has("reference", "account number", "ref")) return `Your account reference is ${a.reference}.`;
   if (has("balance", "owe", "owing", "outstanding")) {
     const nudge = a.balanceCents > 0 ? " Would you like to make a payment or set up a promise to pay?" : "";
     return `Your current balance is ${formatCents(a.balanceCents, a.currency)}.${nudge}`;
   }
+  if (has("phone", "mobile", "number")) return `The phone number on your account is ${a.phone}.`;
 
-  return `Here's a quick summary: balance ${formatCents(a.balanceCents, a.currency)}, email ${a.email}, phone ${a.phone}. Ask me for any specific detail.`;
+  return `Here is a quick summary: balance ${formatCents(a.balanceCents, a.currency)}, ${a.daysPastDue} days past due, email ${a.email}, phone ${a.phone}. Ask me for any specific detail such as your reference, address, minimum payment, or due date.`;
 }
 
 export async function handleIntent(

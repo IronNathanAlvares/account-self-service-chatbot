@@ -23,8 +23,8 @@ beforeEach(() => {
   deps = { repo, notifier, now: () => NOW };
 });
 
-function intent(action: ChatAction, fields: Record<string, unknown> = {}): ParsedIntent {
-  return { action, fields, confidence: 0.99, rawMessage: "test" };
+function intent(action: ChatAction, fields: Record<string, unknown> = {}, rawMessage = "test"): ParsedIntent {
+  return { action, fields, confidence: 0.99, rawMessage };
 }
 
 describe("chat action acceptance contracts", () => {
@@ -164,14 +164,24 @@ describe("chat action acceptance contracts", () => {
   });
 
   it("answers the specific detail asked, not always the balance", async () => {
-    const email = await handleIntent(ACCOUNT_ID, intent("read_account", { readField: "email" }), deps);
+    const email = await handleIntent(ACCOUNT_ID, intent("read_account", {}, "what is my email"), deps);
     expect(email.reply).toContain("jane.murphy@example.test");
 
-    const phone = await handleIntent(ACCOUNT_ID, intent("read_account", { readField: "phone" }), deps);
+    const phone = await handleIntent(ACCOUNT_ID, intent("read_account", {}, "what is my phone number"), deps);
     expect(phone.reply).toContain("+353831234567");
 
-    const balance = await handleIntent(ACCOUNT_ID, intent("read_account", { readField: "balance" }), deps);
-    expect(balance.reply.toLowerCase()).toContain("balance");
+    const reference = await handleIntent(ACCOUNT_ID, intent("read_account", {}, "reference number or id?"), deps);
+    expect(reference.reply).toContain("EI-2026-000123");
+
+    const overdue = await handleIntent(ACCOUNT_ID, intent("read_account", {}, "how many days am i overdue?"), deps);
+    expect(overdue.reply).toContain("47 days");
+
+    const minimum = await handleIntent(ACCOUNT_ID, intent("read_account", {}, "what is my minimum payment"), deps);
+    expect(minimum.reply.toLowerCase()).toContain("minimum");
+
+    const due = await handleIntent(ACCOUNT_ID, intent("read_account", {}, "when is my payment due?"), deps);
+    expect(due.reply.toLowerCase()).toContain("due");
+
     expect(notifier.calls).toHaveLength(0);
   });
 });

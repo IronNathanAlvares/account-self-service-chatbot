@@ -41,7 +41,7 @@ ONLY a JSON object (no prose, no markdown) of this exact shape:
 Possible fields (include only those present in the message):
 - firstName, lastName, email, phone            (for update_account_holder)
 - addressLine1, addressLine2, addressCity, addressPostalCode, addressCountry (for an address change)
-- readField: one of name|email|phone|address|balance|reference  (for read_account, the specific thing asked for)
+- readField: the specific detail asked for, e.g. name|email|phone|address|balance|reference|days_overdue|minimum_payment|due_date|status|creditor|support|last_payment  (for read_account)
 - preferredContactMethod: email|sms|phone      (for update_preferred_contact_method)
 - relatedPersonName, relatedPersonEmail, relatedPersonPhone, relationship, authorizedToAct
 - amountCents: integer euros x 100             (for mock_payment / create_promise_to_pay)
