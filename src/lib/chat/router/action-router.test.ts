@@ -86,9 +86,18 @@ describe("chat action acceptance contracts", () => {
     expect(notifier.calls).toHaveLength(0);
   });
 
-  it("records a mocked payment transaction and deducts it from balance", async () => {
-    const before = (await repo.getAccountContext(ACCOUNT_ID))!.account.balanceCents;
+  it("asks for confirmation before taking a payment", async () => {
     const result = await handleIntent(ACCOUNT_ID, intent("mock_payment", { amountCents: 15000 }), deps);
+
+    expect(result.success).toBe(false);
+    expect(result.requiresConfirmation).toBe(true);
+    expect(result.pending?.stage).toBe("confirm");
+    expect(notifier.calls).toHaveLength(0);
+  });
+
+  it("records a mocked payment transaction and deducts it from balance once confirmed", async () => {
+    const before = (await repo.getAccountContext(ACCOUNT_ID))!.account.balanceCents;
+    const result = await handleIntent(ACCOUNT_ID, intent("mock_payment", { amountCents: 15000 }), deps, { confirmed: true });
 
     expect(result.success).toBe(true);
     expect(result.transaction?.type).toBe("payment");

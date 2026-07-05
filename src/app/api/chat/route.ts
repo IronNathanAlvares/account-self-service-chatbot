@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       accountId,
       message,
       conversationId: body.conversationId,
+      pending: body.pending,
     });
     return NextResponse.json(response, { status: 200 });
   } catch (error) {

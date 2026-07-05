@@ -33,6 +33,14 @@ export type ChatAction =
   | "clarify"
   | "unsupported";
 
+// Carries multi-turn state between requests so the (stateless) server can
+// finish collecting details or wait for a confirmation across messages.
+export type ChatPendingState = {
+  action: ChatAction;
+  fields: Record<string, unknown>;
+  stage: "collect" | "confirm";
+};
+
 export type ChatActionResult = {
   action: ChatAction;
   success: boolean;
@@ -47,12 +55,17 @@ export type ChatActionResult = {
   callAppointments?: CallAppointment[];
   missingFields?: string[];
   notificationQueued?: boolean;
+  /** When set, the client should keep this and send it with the next message. */
+  pending?: ChatPendingState;
+  /** When true, the client should show Yes/No confirm buttons. */
+  requiresConfirmation?: boolean;
 };
 
 export type ChatRequest = {
   accountId: string;
   message: string;
   conversationId?: string;
+  pending?: ChatPendingState;
 };
 
 export type ChatResponse = {

@@ -1,6 +1,6 @@
 import type { AccountContext } from "@/lib/account/types";
 import type { AccountRepository, AccountHolderPatch } from "@/lib/account/repository";
-import type { ChatActionResult } from "@/lib/chat/types";
+import type { ChatAction, ChatActionResult, ChatPendingState } from "@/lib/chat/types";
 import type { ParsedIntent } from "@/lib/chat/intent/intent-types";
 import { formatCents } from "@/lib/money";
 import type { Notifier } from "@/lib/notifications/notifier";
@@ -44,6 +44,17 @@ function fail(action: ChatActionResult["action"], reply: string, extra: Partial<
   return { action, success: false, reply, ...extra };
 }
 
+// Ask for more detail while remembering the action + fields gathered so far.
+function needInfo(
+  action: ChatAction,
+  fields: Record<string, unknown>,
+  reply: string,
+  missingFields: string[],
+): ChatActionResult {
+  const pending: ChatPendingState = { action, fields, stage: "collect" };
+  return { action: "clarify", success: false, reply, missingFields, pending };
+}
+
 // Answer the specific detail the customer asked for, not a fixed field.
 function describeAccount(
   context: AccountContext,
@@ -72,6 +83,7 @@ export async function handleIntent(
   accountId: string,
   intent: ParsedIntent,
   deps: RouterDeps,
+  options: { confirmed?: boolean } = {},
 ): Promise<ChatActionResult> {
   const { repo, notifier } = deps;
   const { action, fields } = intent;
@@ -130,7 +142,7 @@ export async function handleIntent(
       if (lastName !== undefined) patch.lastName = lastName;
 
       if (Object.keys(patch).length === 0) {
-        return fail("clarify", "What would you like to change — your name, email, phone, or address?", { missingFields: ["field"] });
+        return needInfo("update_account_holder", fields, "What would you like to change — your name, email, phone, or address?", ["field"]);
       }
 
       const updated = await repo.updateAccountHolder(accountId, patch);
@@ -158,7 +170,7 @@ export async function handleIntent(
       };
       const missing = (["name", "email", "phone"] as const).filter((k) => !candidate[k]);
       if (missing.length > 0) {
-        return fail("clarify", `To add this person I still need their ${missing.join(", ")}.`, { missingFields: missing });
+        return needInfo("add_related_person", fields, `To add this person I still need their ${missing.join(", ")}.`, [...missing]);
       }
       const v = validate(relatedPersonInputSchema, candidate);
       if (!v.ok) return fail("add_related_person", v.errors[0]);
@@ -176,37 +188,49 @@ export async function handleIntent(
       if (!amountCents) missing.push("amount");
       if (!dueDate) missing.push("dueDate");
       if (missing.length > 0) {
-        return fail("clarify", `To set up a promise to pay I need the ${missing.join(" and ")}.`, { missingFields: missing });
+        return needInfo("create_promise_to_pay", fields, `To set up a promise to pay I need the ${missing.join(" and ")}.`, missing);
       }
       if (amountCents! <= 0) return fail("create_promise_to_pay", "The amount must be greater than zero.");
       if (!isFutureDate(dueDate!, deps.now())) {
         return fail("create_promise_to_pay", "A promise to pay must have a future due date.");
       }
       const promise = await repo.createPromiseToPay(accountId, { amountCents: amountCents!, dueDate: dueDate! });
-      const queued = await notify("Created a promise to pay");
-      return ok("create_promise_to_pay", `Got it — I've recorded a promise to pay ${promise.amountCents / 100} ${promise.currency} on ${promise.dueDate}.`, { promiseToPay: promise, notificationQueued: queued });
+      const queued = await notify(`Created a promise to pay of ${formatCents(amountCents!, context.account.currency)} due ${dueDate}`);
+      return ok("create_promise_to_pay", `Got it — I've recorded a promise to pay ${formatCents(promise.amountCents, promise.currency)} on ${promise.dueDate}.`, { promiseToPay: promise, notificationQueued: queued });
     }
 
     // ---- mocked payment ----------------------------------------------------
     case "mock_payment": {
       const amountCents = num(fields, "amountCents");
-      if (!amountCents) return fail("clarify", "How much would you like to pay?", { missingFields: ["amount"] });
+      if (!amountCents) return needInfo("mock_payment", fields, "How much would you like to pay?", ["amount"]);
       if (amountCents <= 0) return fail("mock_payment", "The payment amount must be greater than zero.");
       if (amountCents > context.account.balanceCents) {
-        return fail("mock_payment", `That's more than your balance of ${context.account.balanceCents / 100} ${context.account.currency}. Try an amount up to your balance.`);
+        return fail("mock_payment", `That's more than your balance of ${formatCents(context.account.balanceCents, context.account.currency)}. Try an amount up to your balance.`);
       }
+
+      // Two-phase confirm: never take a payment without an explicit "yes".
+      if (!options.confirmed) {
+        return {
+          action: "mock_payment",
+          success: false,
+          reply: `You're about to pay ${formatCents(amountCents, context.account.currency)} now using the card on file. Shall I go ahead?`,
+          requiresConfirmation: true,
+          pending: { action: "mock_payment", fields: { amountCents }, stage: "confirm" },
+        };
+      }
+
       const { transaction, account } = await repo.recordPayment(accountId, {
         amountCents,
         idempotencyKey: str(fields, "idempotencyKey"),
       });
-      const queued = await notify(`Recorded a payment of ${amountCents / 100} ${context.account.currency}`);
-      return ok("mock_payment", `Payment of ${amountCents / 100} ${account.account.currency} taken using the card on file. Your new balance is ${account.account.balanceCents / 100} ${account.account.currency}.`, { transaction, account, notificationQueued: queued });
+      const queued = await notify(`Recorded a payment of ${formatCents(amountCents, context.account.currency)}`);
+      return ok("mock_payment", `Payment of ${formatCents(amountCents, account.account.currency)} taken using the card on file. Your new balance is ${formatCents(account.account.balanceCents, account.account.currency)}.`, { transaction, account, notificationQueued: queued });
     }
 
     // ---- call appointment --------------------------------------------------
     case "book_call_appointment": {
       const scheduledAt = str(fields, "scheduledAt");
-      if (!scheduledAt) return fail("clarify", "When would you like the call? Please give a day and time.", { missingFields: ["scheduledAt"] });
+      if (!scheduledAt) return needInfo("book_call_appointment", fields, "When would you like the call? Please give a day and time.", ["scheduledAt"]);
       if (!isFutureDate(scheduledAt, deps.now())) {
         return fail("book_call_appointment", "That time is in the past. Please pick a future date and time.");
       }

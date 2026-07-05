@@ -21,7 +21,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import type { AccountContext } from "@/lib/account/types";
-import type { ChatActionResult, ChatResponse } from "@/lib/chat/types";
+import type { ChatActionResult, ChatPendingState, ChatResponse } from "@/lib/chat/types";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +50,7 @@ export function ChatWidget({
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [pending, setPending] = useState<ChatPendingState | undefined>(undefined);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export function ChatWidget({
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId, message }),
+        body: JSON.stringify({ accountId, message, pending }),
       });
       const body = (await response.json()) as ChatResponse | { error?: string };
       const reply =
@@ -78,6 +79,8 @@ export function ChatWidget({
           : body.error ?? "The assistant did not return a usable response.";
       const result = "result" in body ? body.result : undefined;
 
+      // Carry any multi-turn state (slot-filling / awaiting confirmation) forward.
+      setPending(result?.pending);
       setMessages((m) => [...m, { id: `a-${sentAt + 1}`, role: "agent", content: reply, result }]);
 
       // Live-refresh the dashboard from persisted state after any successful action.
@@ -141,7 +144,10 @@ export function ChatWidget({
           </div>
           <button
             type="button"
-            onClick={() => setMessages([])}
+            onClick={() => {
+              setMessages([]);
+              setPending(undefined);
+            }}
             title="Start a new conversation"
             className="ml-auto flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/20"
           >
@@ -203,6 +209,28 @@ export function ChatWidget({
             </div>
           )}
         </div>
+
+        {pending?.stage === "confirm" ? (
+          <div className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2.5">
+            <span className="mr-auto text-xs font-medium text-amber-800">Awaiting your confirmation</span>
+            <button
+              type="button"
+              onClick={() => void send("yes")}
+              disabled={isSending}
+              className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Yes, confirm
+            </button>
+            <button
+              type="button"
+              onClick={() => void send("no")}
+              disabled={isSending}
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : null}
 
         <div className="border-t border-slate-200/80 bg-white p-3">
           <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2">

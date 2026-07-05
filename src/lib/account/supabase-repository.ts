@@ -211,8 +211,8 @@ export class SupabaseAccountRepository implements AccountRepository {
       await this.recordEvent(
         await this.holderId(accountId),
         "mock_payment",
-        `Recorded payment of ${input.amountCents} cents`,
-        null,
+        `Recorded payment of €${(input.amountCents / 100).toFixed(2)}`,
+        { balanceCents: account.account.balanceCents + input.amountCents },
         { transactionId: transaction.id, newBalanceCents: account.account.balanceCents },
       );
     }

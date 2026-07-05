@@ -3,7 +3,8 @@ import { SupabaseAccountRepository } from "@/lib/account/supabase-repository";
 import type { AccountRepository } from "@/lib/account/repository";
 import { HybridIntentParser } from "@/lib/chat/intent/parse-intent";
 import type { IntentParser } from "@/lib/chat/intent/intent-types";
-import { handleIntent, type RouterDeps } from "@/lib/chat/router/action-router";
+import type { RouterDeps } from "@/lib/chat/router/action-router";
+import { handleConversationTurn } from "@/lib/chat/turn";
 import type { ChatRequest, ChatResponse } from "@/lib/chat/types";
 import { LoggingNotifier, type Notifier } from "@/lib/notifications/notifier";
 import { ResendNotifier } from "@/lib/notifications/resend-notifier";
@@ -38,8 +39,13 @@ export async function handleChat(
   request: ChatRequest,
   deps: ChatServiceDeps = createChatService(),
 ): Promise<ChatResponse> {
-  const intent = await deps.parser.parse(request.message);
-  const result = await handleIntent(request.accountId, intent, deps.router);
+  const result = await handleConversationTurn(
+    request.accountId,
+    request.message,
+    request.pending,
+    deps.parser,
+    deps.router,
+  );
 
   return {
     conversationId: request.conversationId ?? "conversation",
