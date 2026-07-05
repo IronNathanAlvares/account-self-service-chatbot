@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -8,45 +8,38 @@ import {
   CreditCard,
   Euro,
   LayoutGrid,
+  LogOut,
   Mail,
   MapPin,
-  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
   Phone,
-  SendHorizonal,
   UserRound,
   UsersRound,
 } from "lucide-react";
+import Link from "next/link";
 
+import { ChatWidget } from "@/components/chat-widget";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
-  normalizeLegacyFixture,
   type AccountContext,
   type CallAppointment,
-  type LegacyAccountFixture,
   type PromiseToPay,
   type RelatedPerson,
   type Transaction,
 } from "@/lib/account/types";
-import type { ChatResponse } from "@/lib/chat/types";
 import { cn } from "@/lib/utils";
 
 type PortalProps = {
-  fixture: LegacyAccountFixture;
+  initialAccount: AccountContext;
 };
 
-type View = "dashboard" | "conversations";
 type DashboardDataTab =
   | "contact"
   | "people"
   | "promises"
   | "transactions"
   | "calls";
-type ChatMessage = {
-  id: string;
-  role: "customer" | "agent";
-  content: string;
-};
 
 function formatCurrency(amountCents: number, currency: string) {
   return new Intl.NumberFormat("en-IE", {
@@ -96,86 +89,26 @@ function getInitials(firstName: string, lastName: string) {
   return `${firstName[0] ?? ""}${lastName[0] ?? ""}`;
 }
 
-export function DebtorPortal({ fixture }: PortalProps) {
-  const [activeView, setActiveView] = useState<View>("dashboard");
-  const [draft, setDraft] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const accountContext = normalizeLegacyFixture(fixture);
+export function DebtorPortal({ initialAccount }: PortalProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [accountContext, setAccountContext] = useState(initialAccount);
   const fullName = `${accountContext.account.accountHolderFirstName} ${accountContext.account.accountHolderLastName}`;
-
-  const handleSendMessage = async () => {
-    const nextMessage = draft.trim();
-
-    if (!nextMessage || isSending) {
-      return;
-    }
-
-    const sentAt = Date.now();
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: `customer-${sentAt}`,
-        role: "customer",
-        content: nextMessage,
-      },
-    ]);
-    setDraft("");
-    setIsSending(true);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          accountId: accountContext.account.accountId,
-          message: nextMessage,
-          conversationId: "starter-conversation",
-        }),
-      });
-      const body = (await response.json()) as
-        | ChatResponse
-        | { error?: string };
-      const assistantReply =
-        "message" in body
-          ? body.message.content
-          : body.error ?? "The chat API did not return a usable response.";
-
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        {
-          id: `agent-${sentAt + 1}`,
-          role: "agent",
-          content: assistantReply,
-        },
-      ]);
-    } catch {
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        {
-          id: `agent-${sentAt + 1}`,
-          role: "agent",
-          content:
-            "The chat API could not be reached. Check the API route and dev server logs.",
-        },
-      ]);
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   return (
     <div className="min-h-screen overflow-hidden bg-[linear-gradient(135deg,#eef5fb_0%,#dcecf3_52%,#d8f0ec_100%)] p-4 text-slate-900 sm:p-6 lg:p-8">
       <div className="mx-auto flex h-[calc(100vh-2rem)] max-w-[1700px] overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white/45 shadow-[0_28px_80px_rgba(15,23,42,0.14)] backdrop-blur-sm lg:h-[calc(100vh-3rem)]">
-        <aside className="flex w-full shrink-0 flex-col justify-between border-b border-slate-200/80 bg-[linear-gradient(180deg,#dfe8f2_0%,#d7e2ed_100%)] p-5 lg:w-[300px] lg:border-r lg:border-b-0 lg:p-7">
+        <aside
+          className={cn(
+            "flex w-full shrink-0 flex-col justify-between border-b border-slate-200/80 bg-[linear-gradient(180deg,#dfe8f2_0%,#d7e2ed_100%)] p-5 transition-all duration-300 lg:border-r lg:border-b-0",
+            collapsed ? "lg:w-[92px] lg:p-4" : "lg:w-[300px] lg:p-7",
+          )}
+        >
           <div className="space-y-8">
-            <div className="flex items-start gap-4">
-              <div className="flex size-14 items-center justify-center rounded-2xl border border-slate-300/70 bg-white/80 text-slate-700 shadow-sm">
+            <div className={cn("flex items-start gap-4", collapsed && "lg:justify-center")}>
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-slate-300/70 bg-white/80 text-slate-700 shadow-sm">
                 <LayoutGrid className="size-6" />
               </div>
-              <div>
+              <div className={cn(collapsed && "lg:hidden")}>
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
                   Account Portal
                 </h1>
@@ -186,23 +119,23 @@ export function DebtorPortal({ fixture }: PortalProps) {
             </div>
 
             <nav className="space-y-3">
+              <NavItem active icon={LayoutGrid} label="Dashboard" collapsed={collapsed} />
               <NavItem
-                active={activeView === "dashboard"}
-                icon={LayoutGrid}
-                label="Dashboard"
-                onClick={() => setActiveView("dashboard")}
-              />
-              <NavItem
-                active={activeView === "conversations"}
-                icon={MessageSquare}
-                label="Conversations"
-                onClick={() => setActiveView("conversations")}
+                icon={collapsed ? PanelLeftOpen : PanelLeftClose}
+                label="Collapse"
+                collapsed={collapsed}
+                onClick={() => setCollapsed((c) => !c)}
               />
             </nav>
           </div>
 
-          <div className="mt-10 rounded-[1.75rem] border border-slate-300/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-            <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              "mt-10 rounded-[1.75rem] border border-slate-300/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)]",
+              collapsed && "lg:p-2",
+            )}
+          >
+            <div className={cn("flex items-center gap-3", collapsed && "lg:justify-center")}>
               <Avatar size="lg" className="shadow-sm after:border-slate-300/70">
                 <AvatarFallback className="bg-[linear-gradient(135deg,#3b82f6,#0f172a)] font-semibold text-white">
                   {getInitials(
@@ -211,7 +144,7 @@ export function DebtorPortal({ fixture }: PortalProps) {
                   )}
                 </AvatarFallback>
               </Avatar>
-              <div className="min-w-0">
+              <div className={cn("min-w-0", collapsed && "lg:hidden")}>
                 <p className="truncate text-lg font-semibold text-slate-900">
                   {fullName}
                 </p>
@@ -220,23 +153,28 @@ export function DebtorPortal({ fixture }: PortalProps) {
                 </p>
               </div>
             </div>
+            <Link
+              href="/"
+              className={cn(
+                "mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition hover:bg-white/70 hover:text-slate-800",
+                collapsed && "lg:justify-center lg:px-0",
+              )}
+            >
+              <LogOut className="size-4" />
+              <span className={cn(collapsed && "lg:hidden")}>Sign out</span>
+            </Link>
           </div>
         </aside>
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.52),rgba(246,250,252,0.8))] p-4 sm:p-6 lg:p-8">
-          {activeView === "dashboard" ? (
-            <DashboardView accountContext={accountContext} fullName={fullName} />
-          ) : (
-            <ConversationView
-              draft={draft}
-              isSending={isSending}
-              messages={messages}
-              onDraftChange={setDraft}
-              onSendMessage={handleSendMessage}
-            />
-          )}
+          <DashboardView accountContext={accountContext} fullName={fullName} />
         </main>
       </div>
+
+      <ChatWidget
+        accountId={accountContext.account.accountId}
+        onAccountUpdate={setAccountContext}
+      />
     </div>
   );
 }
@@ -428,163 +366,34 @@ function DashboardView({
   );
 }
 
-function ConversationView({
-  draft,
-  isSending,
-  messages,
-  onDraftChange,
-  onSendMessage,
-}: {
-  draft: string;
-  isSending: boolean;
-  messages: ChatMessage[];
-  onDraftChange: (value: string) => void;
-  onSendMessage: () => void | Promise<void>;
-}) {
-  const hasMessages = messages.length > 0;
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      void onSendMessage();
-    }
-  };
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
-
-  return (
-    <section className="mx-auto flex h-full min-h-0 w-full max-w-[1120px] flex-col overflow-hidden rounded-[2rem] border border-white/75 bg-white/72 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm">
-      <div className="shrink-0 border-b border-slate-200/80 px-6 py-5 sm:px-8">
-        <p className="text-sm font-medium uppercase tracking-[0.22em] text-slate-500">
-          Conversations
-        </p>
-        <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight text-slate-950">
-              Chat with AI Assistant
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Send a message through the backend chat API boundary.
-            </p>
-          </div>
-          <div className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
-            Open
-          </div>
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 sm:px-8">
-        {hasMessages ? (
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 pb-2">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex",
-                  message.role === "customer" ? "justify-end" : "justify-start",
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[min(100%,36rem)] rounded-[1.5rem] px-5 py-4 text-sm leading-7 shadow-sm",
-                    message.role === "customer"
-                      ? "bg-[linear-gradient(135deg,#0f1d3d,#213a6b)] text-white"
-                      : "border border-slate-200 bg-slate-50 text-slate-700",
-                  )}
-                >
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">
-                    {message.role === "customer" ? "You" : "AI Support"}
-                  </p>
-                  <p>{message.content}</p>
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        ) : (
-          <div className="flex min-h-full items-center justify-center">
-            <div className="flex w-full max-w-2xl flex-col items-center justify-center rounded-[2rem] border border-dashed border-slate-300 bg-slate-50/70 px-8 py-10 text-center">
-              <div className="flex size-14 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm">
-                <MessageSquare className="size-6" />
-              </div>
-              <h3 className="mt-5 text-2xl font-semibold text-slate-900">
-                No conversation yet
-              </h3>
-              <p className="mt-3 max-w-md text-sm leading-7 text-slate-600">
-                Send the first message and the thread will call the starter
-                chat API route.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <form
-        className="shrink-0 border-t border-slate-200/80 bg-white/90 px-6 py-5 sm:px-8"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void onSendMessage();
-        }}
-      >
-        <div className="mx-auto max-w-4xl rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-          <textarea
-            value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
-            onKeyDown={handleComposerKeyDown}
-            placeholder="Message the AI assistant..."
-            className="min-h-24 w-full resize-none border-0 bg-transparent px-2 py-2 text-base text-slate-900 outline-none placeholder:text-slate-400"
-          />
-          <div className="mt-2 flex items-center justify-between gap-3 px-2">
-            <p className="text-xs text-slate-500">
-              Send with <span className="font-medium text-slate-700">Cmd/Ctrl + Enter</span>
-            </p>
-            <Button
-              type="submit"
-              disabled={!draft.trim() || isSending}
-              className={cn(
-                "h-10 rounded-full px-4 text-sm font-medium text-white shadow-none",
-                draft.trim() && !isSending
-                  ? "bg-slate-500 hover:bg-slate-600"
-                  : "bg-slate-400 hover:bg-slate-400",
-              )}
-            >
-              {isSending ? "Sending" : "Send"}
-              <SendHorizonal className="ml-2 size-4" />
-            </Button>
-          </div>
-        </div>
-      </form>
-    </section>
-  );
-}
-
 function NavItem({
-  active,
+  active = false,
   icon: Icon,
   label,
+  collapsed = false,
   onClick,
 }: {
-  active: boolean;
+  active?: boolean;
   icon: typeof LayoutGrid;
   label: string;
-  onClick: () => void;
+  collapsed?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={collapsed ? label : undefined}
       className={cn(
         "flex w-full items-center gap-3 rounded-[1.4rem] px-5 py-4 text-left text-base font-medium transition",
+        collapsed && "lg:justify-center lg:px-0",
         active
           ? "bg-[linear-gradient(135deg,#0f1d3d,#15294f)] text-white shadow-[0_18px_38px_rgba(15,29,61,0.24)]"
           : "bg-white/55 text-slate-700 hover:bg-white/80",
       )}
     >
-      <Icon className="size-5" />
-      <span>{label}</span>
+      <Icon className="size-5 shrink-0" />
+      <span className={cn(collapsed && "lg:hidden")}>{label}</span>
     </button>
   );
 }
