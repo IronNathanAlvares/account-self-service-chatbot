@@ -39,9 +39,14 @@ export class ResendNotifier implements Notifier {
     const pdfBytes = await buildAccountPdf(ctx);
     const encrypted = await encryptPdf(pdfBytes, password);
 
+    // In dev, Resend's shared sender only delivers to the account owner. This
+    // override lets test emails actually arrive; production (verified domain)
+    // leaves it unset and mails the real account address.
+    const recipient = process.env.NOTIFICATION_TEST_OVERRIDE_EMAIL || ctx.account.email;
+
     const { data } = await this.client.emails.send({
       from: this.fromEmail,
-      to: ctx.account.email,
+      to: recipient,
       subject: "An update was made to your account",
       text: GENERIC_BODY,
       attachments: [
