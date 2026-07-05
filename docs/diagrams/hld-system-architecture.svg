@@ -17,7 +17,7 @@
     </style>
   </defs>
 
-  <text x="30" y="34" font-size="20" font-weight="700" fill="#0f172a">Account Self-Service Chatbot — High-Level Design</text>
+  <text x="30" y="34" font-size="20" font-weight="700" fill="#0f172a">Account Self-Service Chatbot - High-Level Design</text>
   <text x="30" y="54" class="s" font-size="12">Untrusted text in · deterministic, audited actions out · sensitive detail only in an encrypted PDF</text>
 
   <!-- Client lane -->
@@ -38,7 +38,7 @@
   <text class="lane-t" x="338" y="106">SERVER · /api/chat (Node runtime)</text>
 
   <rect class="box" x="345" y="118" width="380" height="46" rx="10"/>
-  <text class="t" x="360" y="139">API route — validate request, compose</text>
+  <text class="t" x="360" y="139">API route - validate request, compose</text>
   <text class="s" x="360" y="156">rejects empty input · no detail in errors</text>
 
   <rect class="box-ai" x="345" y="176" width="380" height="54" rx="10"/>
@@ -46,7 +46,7 @@
   <text class="s" x="360" y="216">rules + LLM → {action, fields, confidence}</text>
 
   <rect class="box" x="345" y="242" width="380" height="48" rx="10"/>
-  <text class="t" x="360" y="264">Action Router — deterministic dispatch</text>
+  <text class="t" x="360" y="264">Action Router - deterministic dispatch</text>
   <text class="s" x="360" y="281">clarify / confirm / execute · LLM never writes</text>
 
   <rect class="box" x="345" y="302" width="185" height="50" rx="10"/>
@@ -61,7 +61,7 @@
   <text class="s" x="359" y="403">interface → Supabase</text>
   <rect class="box" x="540" y="364" width="185" height="50" rx="10"/>
   <text class="t" x="554" y="385">Notification service</text>
-  <text class="s" x="554" y="403">boundary interface</text>
+  <text class="s" x="554" y="403">Resend or SMTP boundary</text>
 
   <rect class="box" x="345" y="426" width="185" height="50" rx="10"/>
   <text class="t" x="359" y="447">Encrypted PDF builder</text>
@@ -83,10 +83,10 @@
   <text class="s" x="826" y="191">promises · calls · audit</text>
   <rect class="box-ai" x="812" y="244" width="196" height="72" rx="10"/>
   <text class="t" x="826" y="271">LLM API</text>
-  <text class="s" x="826" y="291">Claude Haiku (tool use)</text>
+  <text class="s" x="826" y="291">Groq / Gemini / Ollama</text>
   <rect class="box-ext" x="812" y="352" width="196" height="72" rx="10"/>
-  <text class="t" x="826" y="379">Resend</text>
-  <text class="s" x="826" y="399">generic email + PDF</text>
+  <text class="t" x="826" y="379">Resend / SMTP</text>
+  <text class="s" x="826" y="399">email + encrypted PDF</text>
 
   <!-- client <-> server -->
   <path class="edge" d="M258 150 H345"/>

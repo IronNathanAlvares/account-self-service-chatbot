@@ -17,7 +17,7 @@
     </style>
   </defs>
 
-  <text x="28" y="34" font-size="19" font-weight="700" fill="#0f172a">LLD — Request pipeline &amp; action state machine</text>
+  <text x="28" y="34" font-size="19" font-weight="700" fill="#0f172a">LLD - Request pipeline &amp; action state machine</text>
   <text x="28" y="54" class="s">Every customer message flows top-to-bottom. Reads exit early; writes must validate, (confirm), persist, then notify.</text>
 
   <rect class="term" x="360" y="76" width="200" height="40"/>

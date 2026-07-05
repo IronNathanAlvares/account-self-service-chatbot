@@ -7,9 +7,21 @@ Every change is persisted, audited, and confirmed by email with an encrypted PDF
 
 **🔗 Live demo:** https://account-self-service-chatbot.vercel.app/
 **🏗️ Architecture:** [architecture-diagram.md](./architecture-diagram.md) · detailed HLD/LLD in [docs/diagrams](./docs/diagrams)
+**🎬 Demo video:** _coming soon_
 
 > Built on the PayPathIQ starter template. Sign in is a **mock gateway** (no real
 > auth, per the brief) - any credentials continue as the demo account.
+
+---
+
+## Demo video
+
+_A short walkthrough will be linked here._
+
+<!-- TODO: record a ~5 minute walkthrough (sign in -> a read -> an update with
+validation -> add a person via slot-filling -> a payment with the confirmation
+gate and a custom receipt email -> a booking -> the Activity/audit tab), then
+paste the link above and here. -->
 
 ---
 
@@ -99,6 +111,30 @@ pnpm typecheck && pnpm lint
    key such as Groq) in Vercel → Settings → Environment Variables, then redeploy.
 
 Every push to `main` triggers a new Vercel deployment.
+
+---
+
+## Architecture
+
+The system is a thin Next.js UI over a layered, server-side pipeline. The single
+most important design choice is the **one-directional trust boundary**: free
+customer text enters the parser, but only deterministic, validated code ever
+writes to the database or sends email. The LLM classifies; it never acts.
+
+![HLD system architecture](./docs/diagrams/hld-system-architecture.svg)
+
+The detailed HLD/LLD set (request pipeline and state machine, an end-to-end
+sequence, and the data model) lives in [docs/diagrams](./docs/diagrams), each
+with a short note on why it exists and what it shows. In short:
+
+- **Request pipeline / state machine** - where the safety rules live: reads exit
+  early; writes validate; money and destructive actions require confirmation;
+  missing details trigger multi-turn slot-filling.
+- **Sequence (update phone)** - a concrete mutating action, including the audit
+  write and the build/encrypt/send notification steps, with redacted logs.
+- **Data model (ERD)** - the starter tables plus an audit trail and a payment
+  idempotency key. Conversation state is carried by the client each turn, so the
+  API functions stay stateless.
 
 ---
 

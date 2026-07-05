@@ -112,6 +112,11 @@ export function ChatWidget({
     }
   };
 
+  // Context-aware quick replies based on the assistant's last message. Clicking
+  // one pre-fills the composer (as an editable template) without sending.
+  const lastAgent = [...messages].reverse().find((m) => m.role === "agent");
+  const suggestions = messages.length > 0 && !pending ? suggestFor(lastAgent?.result) : [];
+
   return (
     <>
       {/* Floating launcher */}
@@ -214,6 +219,21 @@ export function ChatWidget({
             </div>
           )}
         </div>
+
+        {suggestions.length > 0 ? (
+          <div className="flex gap-2 overflow-x-auto border-t border-slate-200/70 bg-slate-50/60 px-3 py-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setDraft(s)}
+                className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {pending?.stage === "confirm" ? (
           <div className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2.5">
@@ -365,4 +385,36 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
       <span className={cn("text-right", strong ? "font-semibold text-slate-900" : "text-slate-700")}>{value}</span>
     </div>
   );
+}
+
+// Suggested next messages based on what the assistant just did.
+function suggestFor(result?: ChatActionResult): string[] {
+  if (!result) return [];
+  switch (result.action) {
+    case "read_account":
+      return ["Pay 100 now", "Set up a promise to pay", "Show my transactions"];
+    case "read_transactions":
+      return ["Make a payment", "Show my promises to pay"];
+    case "read_promises_to_pay":
+      return ["Make a payment now", "Show my transactions"];
+    case "read_related_people":
+      return ["Add someone to my account", "Show my details"];
+    case "read_call_appointments":
+      return ["Book a call next Tuesday at 10am", "What's my balance?"];
+    case "mock_payment":
+      return result.success
+        ? ["Show my transactions", "What's my balance?", "Make another payment"]
+        : ["Try a smaller amount", "What's my balance?"];
+    case "create_promise_to_pay":
+      return ["Show my promises", "Make a payment now"];
+    case "add_related_person":
+      return ["Show my people", "Add someone else"];
+    case "update_account_holder":
+    case "update_preferred_contact_method":
+      return ["Show my details", "What's my balance?"];
+    case "book_call_appointment":
+      return ["Show my calls", "Book another call"];
+    default:
+      return ["What's my balance?", "Update my email", "Book a call"];
+  }
 }
