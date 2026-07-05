@@ -65,7 +65,7 @@ export class ResendNotifier implements Notifier {
       // still using Resend's shared onboarding@resend.dev sender.
       console.error("[resend] send failed:", error.message);
       return {
-        notificationId: `resend_error_${Date.now()}`,
+        notificationId: "",
         sent: false,
         redactedRecipient: redactEmail(recipient),
       };

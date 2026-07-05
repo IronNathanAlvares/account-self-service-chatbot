@@ -314,8 +314,14 @@ export async function handleIntent(
         amountCents,
         idempotencyKey: str(fields, "idempotencyKey"),
       });
-      const queued = await notify(`Recorded a payment of ${formatCents(amountCents, context.account.currency)}`, receiptEmail);
-      return ok("mock_payment", `Payment of ${formatCents(amountCents, account.account.currency)} taken using the card on file. Your new balance is ${formatCents(account.account.balanceCents, account.account.currency)}. Receipt sent to ${receiptEmail}.`, { transaction, account, notificationQueued: queued, sessionMemory: { receiptEmail } });
+      // Only override the email recipient when the customer chose a real receipt
+      // email; the default (account email) uses the normal notification routing.
+      const isCustomReceipt = receiptEmail !== context.account.email;
+      const queued = await notify(`Recorded a payment of ${formatCents(amountCents, context.account.currency)}`, isCustomReceipt ? receiptEmail : undefined);
+      const receiptNote = queued
+        ? ` Receipt sent to ${receiptEmail}.`
+        : ` (The payment went through, but the receipt email to ${receiptEmail} could not be delivered.)`;
+      return ok("mock_payment", `Payment of ${formatCents(amountCents, account.account.currency)} taken using the card on file. Your new balance is ${formatCents(account.account.balanceCents, account.account.currency)}.${receiptNote}`, { transaction, account, notificationQueued: queued, sessionMemory: { receiptEmail } });
     }
 
     // ---- call appointment --------------------------------------------------
