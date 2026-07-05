@@ -37,6 +37,15 @@ describe("chat action acceptance contracts", () => {
     expect(notifier.calls).toHaveLength(1);
   });
 
+  it("updates the postal address, merging with the existing one", async () => {
+    const result = await handleIntent(ACCOUNT_ID, intent("update_account_holder", { addressLine1: "5 Main Street", addressCity: "Cork", addressPostalCode: "T12 AB34" }), deps);
+    expect(result.success).toBe(true);
+    const ctx = await repo.getAccountContext(ACCOUNT_ID);
+    expect(ctx?.account.address.line1).toBe("5 Main Street");
+    expect(ctx?.account.address.city).toBe("Cork");
+    expect(ctx?.account.address.country).toBe("Ireland");
+  });
+
   it("rejects an invalid email without writing or notifying", async () => {
     const result = await handleIntent(ACCOUNT_ID, intent("update_account_holder", { email: "nope" }), deps);
 

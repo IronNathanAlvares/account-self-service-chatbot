@@ -3,8 +3,10 @@ import type { AccountRepository, AccountHolderPatch } from "@/lib/account/reposi
 import type { ChatAction, ChatActionResult, ChatPendingState, ChatSessionMemory } from "@/lib/chat/types";
 import type { ParsedIntent } from "@/lib/chat/intent/intent-types";
 import { formatCents } from "@/lib/money";
+import { emailCanReachAnyRecipient } from "@/lib/notifications/email-capability";
 import type { Notifier } from "@/lib/notifications/notifier";
 import {
+  addressInputSchema,
   contactMethodSchema,
   emailSchema,
   isFutureDate,
@@ -106,7 +108,7 @@ export async function handleIntent(
   }
 
   // Fetches the freshest snapshot and sends the redacted change notification.
-  const notify = async (changeSummary: string, recipientOverride?: string): Promise<boolean> => {
+  const notify = async (changeSummary: string, recipientOverride?: string, ccOverride?: string[]): Promise<boolean> => {
     const snapshot = (await repo.getAccountContext(accountId)) ?? context;
     const result = await notifier.send({
       accountId,
@@ -114,6 +116,7 @@ export async function handleIntent(
       changeSummary,
       accountSnapshot: snapshot,
       recipientOverride,
+      ccOverride,
     });
     return result.sent || result.notificationId.length > 0;
   };
@@ -153,6 +156,22 @@ export async function handleIntent(
       }
       if (firstName !== undefined) patch.firstName = firstName;
       if (lastName !== undefined) patch.lastName = lastName;
+
+      // Address: merge any provided lines with the current address, then validate.
+      const addrKeys = ["addressLine1", "addressLine2", "addressCity", "addressPostalCode", "addressCountry"] as const;
+      if (addrKeys.some((k) => str(fields, k) !== undefined)) {
+        const current = context.account.address;
+        const merged = {
+          line1: str(fields, "addressLine1") ?? current.line1,
+          line2: str(fields, "addressLine2") ?? current.line2,
+          city: str(fields, "addressCity") ?? current.city,
+          postalCode: str(fields, "addressPostalCode") ?? current.postalCode,
+          country: str(fields, "addressCountry") ?? current.country,
+        };
+        const v = validate(addressInputSchema, merged);
+        if (!v.ok) return fail("update_account_holder", v.errors[0]);
+        patch.address = v.value;
+      }
 
       if (Object.keys(patch).length === 0) {
         return needInfo("update_account_holder", fields, "What would you like to change - your name, email, phone, or address?", ["field"]);
@@ -314,13 +333,27 @@ export async function handleIntent(
         amountCents,
         idempotencyKey: str(fields, "idempotencyKey"),
       });
-      // Only override the email recipient when the customer chose a real receipt
-      // email; the default (account email) uses the normal notification routing.
+
+      // A custom receipt email can only be delivered when a verified sending
+      // domain is configured; otherwise we send to the account email and say so,
+      // rather than silently failing. When we can, we CC the account owner.
       const isCustomReceipt = receiptEmail !== context.account.email;
-      const queued = await notify(`Recorded a payment of ${formatCents(amountCents, context.account.currency)}`, isCustomReceipt ? receiptEmail : undefined);
-      const receiptNote = queued
-        ? ` Receipt sent to ${receiptEmail}.`
-        : ` (The payment went through, but the receipt email to ${receiptEmail} could not be delivered.)`;
+      const deliverCustom = isCustomReceipt && emailCanReachAnyRecipient();
+      const queued = await notify(
+        `Recorded a payment of ${formatCents(amountCents, context.account.currency)}`,
+        deliverCustom ? receiptEmail : undefined,
+        deliverCustom ? [context.account.email] : undefined,
+      );
+
+      let receiptNote: string;
+      if (deliverCustom) {
+        receiptNote = ` Receipt sent to ${receiptEmail}, with a copy to your account email.`;
+      } else if (isCustomReceipt) {
+        receiptNote = ` Note: in this demo the receipt can only be emailed to your account address on file. Sending to ${receiptEmail} needs a verified email domain.`;
+      } else {
+        receiptNote = queued ? " Receipt sent to your account email." : " (The receipt email could not be delivered.)";
+      }
+
       return ok("mock_payment", `Payment of ${formatCents(amountCents, account.account.currency)} taken using the card on file. Your new balance is ${formatCents(account.account.balanceCents, account.account.currency)}.${receiptNote}`, { transaction, account, notificationQueued: queued, sessionMemory: { receiptEmail } });
     }
 

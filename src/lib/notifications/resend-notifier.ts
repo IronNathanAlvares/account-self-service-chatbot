@@ -50,6 +50,7 @@ export class ResendNotifier implements Notifier {
     const { data, error } = await this.client.emails.send({
       from: this.fromEmail,
       to: recipient,
+      cc: notification.ccOverride,
       subject: "An update was made to your account",
       text: GENERIC_BODY,
       attachments: [

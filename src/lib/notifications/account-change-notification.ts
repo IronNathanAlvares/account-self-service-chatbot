@@ -7,6 +7,8 @@ export type AccountChangeNotification = {
   accountSnapshot: AccountContext;
   /** Optional recipient override (e.g. a payment receipt email) for this send. */
   recipientOverride?: string;
+  /** Optional CC list (e.g. copy the account owner on a receipt). */
+  ccOverride?: string[];
 };
 
 export type AccountChangeNotificationResult = {
