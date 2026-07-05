@@ -53,6 +53,12 @@ Rules:
 - "What's my email?" -> read_account with readField=email.
 - "Change my email to x" -> update_account_holder with email=x.
 - Money like "150 euro" -> amountCents 15000.
+- PAYMENT vs PROMISE (important):
+  * "pay 150 now", "pay 150 today", "make a payment of 150" -> mock_payment (immediate).
+  * "can I pay 150 on the 1st", "I'll pay 150 next month", any FUTURE-dated intent to pay -> create_promise_to_pay.
+- ADD vs UPDATE person:
+  * "add <name>", "add my brother", "<name> can act for me" -> add_related_person.
+  * "change/update <existing name>'s phone/email" -> update_related_person.
 - Ambiguous -> action clarify. Off-topic -> action unsupported.`;
 
 export type OpenAICompatibleOptions = {
@@ -64,12 +70,8 @@ export type OpenAICompatibleOptions = {
 export class OpenAICompatibleParser implements IntentParser {
   constructor(private readonly opts: OpenAICompatibleOptions) {}
 
-  async parse(message: string, context?: ParseContext): Promise<ParsedIntent> {
-    const contextNote = context?.pendingAction
-      ? `\n\n(Currently completing a "${context.pendingAction}" request. Already collected: ${JSON.stringify(context.pendingFields ?? {})}.)`
-      : "";
-
-    const response = await fetch(`${this.opts.baseUrl}/chat/completions`, {
+  private call(messages: Array<{ role: string; content: string }>, jsonMode: boolean) {
+    return fetch(`${this.opts.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -78,14 +80,28 @@ export class OpenAICompatibleParser implements IntentParser {
       body: JSON.stringify({
         model: this.opts.model,
         temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `${message}${contextNote}` },
-        ],
+        ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+        messages,
       }),
     });
+  }
 
+  async parse(message: string, context?: ParseContext): Promise<ParsedIntent> {
+    const contextNote = context?.pendingAction
+      ? `\n\n(Currently completing a "${context.pendingAction}" request. Already collected: ${JSON.stringify(context.pendingFields ?? {})}.)`
+      : "";
+
+    const messages = [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: `${message}${contextNote}` },
+    ];
+
+    // Try with JSON mode; some models/endpoints reject response_format, so
+    // fall back to a plain call (the prompt still asks for JSON only).
+    let response = await this.call(messages, true);
+    if (!response.ok) {
+      response = await this.call(messages, false);
+    }
     if (!response.ok) {
       throw new Error(`LLM request failed: ${response.status}`);
     }

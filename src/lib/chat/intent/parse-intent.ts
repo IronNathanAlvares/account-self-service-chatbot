@@ -65,6 +65,15 @@ function createDefaultLlm(): IntentParser | null {
       model: process.env.LLM_MODEL ?? "gemini-2.0-flash",
     });
   }
+  // Ollama (local models, e.g. mistral / llama3.2 / qwen). Free, but only
+  // reachable where Ollama runs — great for local dev, not for a cloud deploy.
+  if (process.env.OLLAMA_MODEL) {
+    return new OpenAICompatibleParser({
+      baseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1",
+      apiKey: "ollama",
+      model: process.env.OLLAMA_MODEL,
+    });
+  }
   // Generic OpenAI-compatible endpoint (incl. OpenAI itself).
   if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
     return new OpenAICompatibleParser({
