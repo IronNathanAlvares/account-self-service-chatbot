@@ -6,17 +6,30 @@ import {
   useRef,
   useState,
 } from "react";
-import { Bot, SendHorizonal, Sparkles, X } from "lucide-react";
+import {
+  Bot,
+  CalendarClock,
+  CheckCircle2,
+  HandCoins,
+  Receipt,
+  RotateCcw,
+  SendHorizonal,
+  Sparkles,
+  UserPlus,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { AccountContext } from "@/lib/account/types";
-import type { ChatResponse } from "@/lib/chat/types";
+import type { ChatActionResult, ChatResponse } from "@/lib/chat/types";
+import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 type ChatMessage = {
   id: string;
   role: "customer" | "agent";
   content: string;
+  result?: ChatActionResult;
 };
 
 const SUGGESTIONS = [
@@ -63,8 +76,9 @@ export function ChatWidget({
         "message" in body
           ? body.message.content
           : body.error ?? "The assistant did not return a usable response.";
+      const result = "result" in body ? body.result : undefined;
 
-      setMessages((m) => [...m, { id: `a-${sentAt + 1}`, role: "agent", content: reply }]);
+      setMessages((m) => [...m, { id: `a-${sentAt + 1}`, role: "agent", content: reply, result }]);
 
       // Live-refresh the dashboard from persisted state after any successful action.
       if ("result" in body && body.result?.success && onAccountUpdate) {
@@ -125,6 +139,14 @@ export function ChatWidget({
               <span className="size-2 rounded-full bg-emerald-400" /> Online
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setMessages([])}
+            title="Start a new conversation"
+            className="ml-auto flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/20"
+          >
+            <RotateCcw className="size-3.5" /> New
+          </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -151,10 +173,13 @@ export function ChatWidget({
           ) : (
             <div className="flex flex-col gap-3">
               {messages.map((m) => (
-                <div key={m.id} className={cn("flex", m.role === "customer" ? "justify-end" : "justify-start")}>
+                <div
+                  key={m.id}
+                  className={cn("flex flex-col gap-2", m.role === "customer" ? "items-end" : "items-start")}
+                >
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-6 shadow-sm",
+                      "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-6 shadow-sm",
                       m.role === "customer"
                         ? "bg-[linear-gradient(135deg,#0f1d3d,#213a6b)] text-white"
                         : "border border-slate-200 bg-slate-50 text-slate-700",
@@ -162,6 +187,7 @@ export function ChatWidget({
                   >
                     {m.content}
                   </div>
+                  {m.role === "agent" && m.result ? <ActionCard result={m.result} /> : null}
                 </div>
               ))}
               {isSending ? (
@@ -201,5 +227,109 @@ export function ChatWidget({
         </div>
       </div>
     </>
+  );
+}
+
+// Renders a rich card for a structured action result (receipt, promise, etc.).
+function ActionCard({ result }: { result: ChatActionResult }) {
+  if (result.transaction) {
+    const t = result.transaction;
+    return (
+      <Card icon={Receipt} tone="emerald" title="Payment receipt">
+        <Row label="Amount" value={formatCents(t.amountCents, t.currency)} strong />
+        <Row label="Status" value={t.status} />
+        <Row label="Date" value={t.transactionDate} />
+        {result.account ? (
+          <Row label="New balance" value={formatCents(result.account.account.balanceCents, result.account.account.currency)} strong />
+        ) : null}
+      </Card>
+    );
+  }
+
+  if (result.promiseToPay) {
+    const p = result.promiseToPay;
+    return (
+      <Card icon={HandCoins} tone="indigo" title="Promise to pay">
+        <Row label="Amount" value={formatCents(p.amountCents, p.currency)} strong />
+        <Row label="Due" value={p.dueDate} />
+        <Row label="Status" value={p.status} />
+      </Card>
+    );
+  }
+
+  if (result.callAppointment) {
+    const c = result.callAppointment;
+    return (
+      <Card icon={CalendarClock} tone="indigo" title="Call booked">
+        <Row label="When" value={new Date(c.scheduledAt).toLocaleString("en-IE")} strong />
+        <Row label="Phone" value={c.phone} />
+        {c.reason ? <Row label="Reason" value={c.reason} /> : null}
+      </Card>
+    );
+  }
+
+  if (result.action === "add_related_person" && result.success) {
+    return (
+      <Card icon={UserPlus} tone="emerald" title="Person added">
+        <p className="text-xs text-slate-500">A notification with the encrypted PDF has been sent.</p>
+      </Card>
+    );
+  }
+
+  if (result.relatedPeople && result.relatedPeople.length > 0) {
+    return (
+      <Card icon={UserPlus} tone="slate" title={`Related people (${result.relatedPeople.length})`}>
+        {result.relatedPeople.map((person) => (
+          <Row key={person.id} label={person.name} value={person.authorizedToAct ? "Authorized" : "Not authorized"} />
+        ))}
+      </Card>
+    );
+  }
+
+  if ((result.action === "update_account_holder" || result.action === "update_preferred_contact_method") && result.success) {
+    return (
+      <Card icon={CheckCircle2} tone="emerald" title="Change saved">
+        <p className="text-xs text-slate-500">Updated and a notification email with the encrypted PDF was queued.</p>
+      </Card>
+    );
+  }
+
+  return null;
+}
+
+const TONES: Record<string, string> = {
+  emerald: "border-emerald-200 bg-emerald-50",
+  indigo: "border-indigo-200 bg-indigo-50",
+  slate: "border-slate-200 bg-slate-50",
+};
+
+function Card({
+  icon: Icon,
+  tone,
+  title,
+  children,
+}: {
+  icon: typeof Receipt;
+  tone: keyof typeof TONES | string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("w-[85%] rounded-2xl border p-3 shadow-sm", TONES[tone] ?? TONES.slate)}>
+      <div className="mb-2 flex items-center gap-2 text-slate-800">
+        <Icon className="size-4" />
+        <span className="text-xs font-semibold uppercase tracking-wide">{title}</span>
+      </div>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-slate-500">{label}</span>
+      <span className={cn("text-right", strong ? "font-semibold text-slate-900" : "text-slate-700")}>{value}</span>
+    </div>
   );
 }

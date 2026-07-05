@@ -118,4 +118,16 @@ describe("chat action acceptance contracts", () => {
     expect(result.transactions?.length).toBeGreaterThan(0);
     expect(notifier.calls).toHaveLength(0);
   });
+
+  it("answers the specific detail asked, not always the balance", async () => {
+    const email = await handleIntent(ACCOUNT_ID, intent("read_account", { readField: "email" }), deps);
+    expect(email.reply).toContain("jane.murphy@example.test");
+
+    const phone = await handleIntent(ACCOUNT_ID, intent("read_account", { readField: "phone" }), deps);
+    expect(phone.reply).toContain("+353831234567");
+
+    const balance = await handleIntent(ACCOUNT_ID, intent("read_account", { readField: "balance" }), deps);
+    expect(balance.reply.toLowerCase()).toContain("balance");
+    expect(notifier.calls).toHaveLength(0);
+  });
 });

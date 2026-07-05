@@ -7,6 +7,7 @@ import {
   Clock3,
   CreditCard,
   Euro,
+  History,
   LayoutGrid,
   LogOut,
   Mail,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { AuditView } from "@/components/audit-view";
 import { ChatWidget } from "@/components/chat-widget";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -91,6 +93,7 @@ function getInitials(firstName: string, lastName: string) {
 
 export function DebtorPortal({ initialAccount }: PortalProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [view, setView] = useState<"dashboard" | "activity">("dashboard");
   const [accountContext, setAccountContext] = useState(initialAccount);
   const fullName = `${accountContext.account.accountHolderFirstName} ${accountContext.account.accountHolderLastName}`;
 
@@ -119,7 +122,20 @@ export function DebtorPortal({ initialAccount }: PortalProps) {
             </div>
 
             <nav className="space-y-3">
-              <NavItem active icon={LayoutGrid} label="Dashboard" collapsed={collapsed} />
+              <NavItem
+                active={view === "dashboard"}
+                icon={LayoutGrid}
+                label="Dashboard"
+                collapsed={collapsed}
+                onClick={() => setView("dashboard")}
+              />
+              <NavItem
+                active={view === "activity"}
+                icon={History}
+                label="Activity"
+                collapsed={collapsed}
+                onClick={() => setView("activity")}
+              />
               <NavItem
                 icon={collapsed ? PanelLeftOpen : PanelLeftClose}
                 label="Collapse"
@@ -167,7 +183,11 @@ export function DebtorPortal({ initialAccount }: PortalProps) {
         </aside>
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.52),rgba(246,250,252,0.8))] p-4 sm:p-6 lg:p-8">
-          <DashboardView accountContext={accountContext} fullName={fullName} />
+          {view === "dashboard" ? (
+            <DashboardView accountContext={accountContext} fullName={fullName} />
+          ) : (
+            <AuditView accountId={accountContext.account.accountId} />
+          )}
         </main>
       </div>
 

@@ -1,4 +1,5 @@
 import { LlmIntentParser } from "./llm-parser";
+import { OpenAICompatibleParser } from "./openai-compatible-parser";
 import { RuleBasedParser } from "./rule-based-parser";
 import {
   CONFIDENCE_CLARIFY_THRESHOLD,
@@ -42,7 +43,40 @@ export class HybridIntentParser implements IntentParser {
 }
 
 function createDefaultLlm(): IntentParser | null {
-  return process.env.ANTHROPIC_API_KEY ? new LlmIntentParser() : null;
+  // Prefer whichever provider is configured. Free options first.
+  if (process.env.GROQ_API_KEY) {
+    return new OpenAICompatibleParser({
+      baseUrl: "https://api.groq.com/openai/v1",
+      apiKey: process.env.GROQ_API_KEY,
+      model: process.env.LLM_MODEL ?? "llama-3.3-70b-versatile",
+    });
+  }
+  if (process.env.OPENROUTER_API_KEY) {
+    return new OpenAICompatibleParser({
+      baseUrl: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      model: process.env.LLM_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free",
+    });
+  }
+  if (process.env.GEMINI_API_KEY) {
+    return new OpenAICompatibleParser({
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+      apiKey: process.env.GEMINI_API_KEY,
+      model: process.env.LLM_MODEL ?? "gemini-2.0-flash",
+    });
+  }
+  // Generic OpenAI-compatible endpoint (incl. OpenAI itself).
+  if (process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
+    return new OpenAICompatibleParser({
+      baseUrl: process.env.LLM_BASE_URL,
+      apiKey: process.env.LLM_API_KEY,
+      model: process.env.LLM_MODEL ?? "gpt-4o-mini",
+    });
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return new LlmIntentParser();
+  }
+  return null;
 }
 
 export function shouldClarify(intent: ParsedIntent): boolean {

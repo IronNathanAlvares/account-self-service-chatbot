@@ -32,8 +32,9 @@ const RULES: Rule[] = [
   {
     action: "read_account",
     patterns: [
-      /\bwhat('?s| is)?\b.*(email|phone|address|balance|name|reference).*(on|my)/i,
-      /\b(my|current)\s+(email|phone number|address|balance)\b/i,
+      /\b(what|what's|whats|show|tell)\b.*\b(email|phone|mobile|number|address|balance|name|reference)\b/i,
+      /\b(my|the|current)\s+(email|phone|address|balance|name|reference)\b/i,
+      /\b(how much|what).*(owe|balance|outstanding)\b/i,
     ],
   },
 ];

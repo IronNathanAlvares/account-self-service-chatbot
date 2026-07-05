@@ -1,6 +1,8 @@
+import type { AccountContext } from "@/lib/account/types";
 import type { AccountRepository, AccountHolderPatch } from "@/lib/account/repository";
 import type { ChatActionResult } from "@/lib/chat/types";
 import type { ParsedIntent } from "@/lib/chat/intent/intent-types";
+import { formatCents } from "@/lib/money";
 import type { Notifier } from "@/lib/notifications/notifier";
 import {
   contactMethodSchema,
@@ -42,6 +44,30 @@ function fail(action: ChatActionResult["action"], reply: string, extra: Partial<
   return { action, success: false, reply, ...extra };
 }
 
+// Answer the specific detail the customer asked for, not a fixed field.
+function describeAccount(
+  context: AccountContext,
+  fields: Record<string, unknown>,
+  rawMessage: string,
+): string {
+  const a = context.account;
+  const text = `${str(fields, "readField") ?? ""} ${rawMessage}`.toLowerCase();
+  const has = (...words: string[]) => words.some((w) => text.includes(w));
+
+  const address = [a.address.line1, a.address.line2, a.address.city, a.address.postalCode, a.address.country]
+    .filter(Boolean)
+    .join(", ");
+
+  if (has("email")) return `The email on your account is ${a.email}.`;
+  if (has("phone", "mobile", "number")) return `The phone number on your account is ${a.phone}.`;
+  if (has("address", "postal", "where i live")) return `Your address on file is ${address}.`;
+  if (has("name", "who am i")) return `The name on your account is ${a.accountHolderFirstName} ${a.accountHolderLastName}.`;
+  if (has("reference", "account number", "ref")) return `Your account reference is ${a.reference}.`;
+  if (has("balance", "owe", "owing", "outstanding")) return `Your current balance is ${formatCents(a.balanceCents, a.currency)}.`;
+
+  return `Here's a quick summary: balance ${formatCents(a.balanceCents, a.currency)}, email ${a.email}, phone ${a.phone}. Ask me for any specific detail.`;
+}
+
 export async function handleIntent(
   accountId: string,
   intent: ParsedIntent,
@@ -70,7 +96,7 @@ export async function handleIntent(
   switch (action) {
     // ---- reads (no writes, no notification) --------------------------------
     case "read_account":
-      return ok("read_account", `Your account balance is currently ${context.account.balanceCents / 100} ${context.account.currency}. Ask me for your email, phone, or address any time.`, { account: context });
+      return ok("read_account", describeAccount(context, fields, intent.rawMessage), { account: context });
     case "read_preferred_contact_method":
       return ok("read_preferred_contact_method", `Your preferred contact method is ${context.account.preferredContactMethod}.`, { account: context });
     case "read_related_people":
