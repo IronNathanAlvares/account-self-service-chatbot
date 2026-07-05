@@ -181,14 +181,6 @@ export class InMemoryAccountRepository implements AccountRepository {
     const ctx = this.require(accountId);
     ctx.callAppointments = ctx.callAppointments.filter((c) => c.id !== appointmentId);
   }
-
-  async reversePayment(accountId: string, transactionId: string): Promise<void> {
-    const ctx = this.require(accountId);
-    const txn = ctx.transactions.find((t) => t.id === transactionId);
-    if (!txn) return;
-    ctx.account.balanceCents += txn.amountCents;
-    ctx.transactions = ctx.transactions.filter((t) => t.id !== transactionId);
-  }
 }
 
 export function defaultSeed(): AccountContext {

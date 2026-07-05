@@ -275,32 +275,6 @@ export class SupabaseAccountRepository implements AccountRepository {
     if (error) throw new Error(error.message);
     await this.recordEvent(holderId, "undo", "Reverted a call appointment", null, null);
   }
-
-  async reversePayment(accountId: string, transactionId: string): Promise<void> {
-    const holderId = await this.holderId(accountId);
-    const { data: txn } = await this.db
-      .from("transactions")
-      .select("amount_cents")
-      .eq("id", transactionId)
-      .eq("account_holder_id", holderId)
-      .maybeSingle();
-    if (!txn) return;
-    const amount = n((txn as Row).amount_cents);
-
-    const { data: acct } = await this.db
-      .from("account_holders")
-      .select("balance_cents")
-      .eq("id", holderId)
-      .maybeSingle();
-    const newBalance = n((acct as Row).balance_cents) + amount;
-
-    await this.db
-      .from("account_holders")
-      .update({ balance_cents: newBalance, updated_at: new Date().toISOString() })
-      .eq("id", holderId);
-    await this.db.from("transactions").delete().eq("id", transactionId).eq("account_holder_id", holderId);
-    await this.recordEvent(holderId, "undo", `Reversed a payment of €${(amount / 100).toFixed(2)}`, null, null);
-  }
 }
 
 // --- mappers: snake_case DB rows -> camelCase domain types -----------------

@@ -3,10 +3,11 @@ import type { AccountHolder, CallAppointment, PromiseToPay, RelatedPerson } from
 import type { RouterDeps } from "@/lib/chat/router/action-router";
 import type { ChatActionResult } from "@/lib/chat/types";
 
-// "Undo that" - reverts the most recent change using the audit trail. Because
-// payments here are mocked, undo can safely restore the balance; in a real
-// system a refund would require verification. Requires the Supabase-backed
-// repository (the audit trail lives in the database).
+// "Undo that" - reverts the most recent change using the audit trail. It
+// deliberately covers only reversible, non-financial changes (detail edits,
+// people, promises, appointments). Payments are NOT reversible here: a refund
+// is a financial action that should require verification, not a chat command.
+// Requires the Supabase-backed repository (the audit trail lives in the DB).
 
 export async function undoLastChange(accountId: string, deps: RouterDeps): Promise<ChatActionResult> {
   const [event] = await listChangeEvents(accountId, 1);
@@ -95,12 +96,12 @@ export async function undoLastChange(accountId: string, deps: RouterDeps): Promi
       return done("Done - I've cancelled that call appointment.", "Reverted a call appointment");
     }
 
-    case "mock_payment": {
-      const after = event.after as { transactionId?: string } | null;
-      if (!after?.transactionId) break;
-      await deps.repo.reversePayment(accountId, after.transactionId);
-      return done("Done - I've reversed that payment and restored your balance.", "Reversed a payment");
-    }
+    case "mock_payment":
+      return {
+        action: "clarify",
+        success: false,
+        reply: "For your security I can't reverse a payment from here - a refund needs to be verified. Please contact support and they'll sort it out. I can still undo other changes like a booking or a detail update.",
+      };
   }
 
   return {

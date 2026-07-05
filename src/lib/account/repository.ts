@@ -74,9 +74,7 @@ export interface AccountRepository {
     input: AppointmentInput,
   ): Promise<CallAppointment>;
 
-  // --- reversal operations used by "undo" ---------------------------------
+  // --- reversal operations used by "undo" (non-financial only) ------------
   deletePromiseToPay(accountId: string, promiseId: string): Promise<void>;
   deleteCallAppointment(accountId: string, appointmentId: string): Promise<void>;
-  /** Reverses a mocked payment: adds the amount back to the balance and removes the transaction. */
-  reversePayment(accountId: string, transactionId: string): Promise<void>;
 }
