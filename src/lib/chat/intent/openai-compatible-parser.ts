@@ -94,8 +94,12 @@ export class OpenAICompatibleParser implements IntentParser {
       ? `\n\n(Currently completing a "${context.pendingAction}" request. Already collected: ${JSON.stringify(context.pendingFields ?? {})}.)`
       : "";
 
+    const now = new Date();
+    const dateContext = `Current date and time is ${now.toISOString()} (${now.toLocaleDateString("en-IE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}). Resolve relative dates and times such as "today", "tomorrow", "next Tuesday", "the 1st of next month", "4pm" against this, and always output future dates in ISO 8601.`;
+
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: dateContext },
       { role: "user", content: `${message}${contextNote}` },
     ];
 
