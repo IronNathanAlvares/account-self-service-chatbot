@@ -15,4 +15,13 @@ describe("RuleBasedParser", () => {
     const result = await parser.parse("Add my brother so he can speak for me");
     expect(result.confidence).toBeLessThan(0.7);
   });
+
+  it("never treats a mutation command as a read", async () => {
+    expect((await parser.parse("Change my phone to +353870398649")).confidence).toBeLessThan(0.7);
+    expect((await parser.parse("Update my email to a@b.com")).confidence).toBeLessThan(0.7);
+    expect((await parser.parse("Set my preferred contact to sms")).confidence).toBeLessThan(0.7);
+    // Pure reads still take the fast path.
+    expect((await parser.parse("What's my phone number?")).action).toBe("read_account");
+    expect((await parser.parse("Show my promises to pay")).action).toBe("read_promises_to_pay");
+  });
 });

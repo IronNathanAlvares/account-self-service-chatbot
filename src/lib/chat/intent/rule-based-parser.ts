@@ -44,6 +44,13 @@ export class RuleBasedParser implements IntentParser {
     void _context;
     const text = message.trim();
 
+    // Any command with a mutation verb must go to the LLM for structured
+    // extraction. The read fast-path only handles pure questions, otherwise
+    // "change my phone to X" would wrongly match the "my phone" read pattern.
+    if (/\b(change|update|set|edit|modify|add|remove|delete|book|schedule|cancel)\b/i.test(text)) {
+      return { action: "clarify", fields: {}, confidence: 0, rawMessage: message };
+    }
+
     for (const rule of RULES) {
       if (rule.patterns.some((p) => p.test(text))) {
         return {
