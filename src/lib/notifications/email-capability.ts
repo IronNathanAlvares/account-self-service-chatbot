@@ -7,6 +7,10 @@
 // custom receipt email or explain the demo limitation instead of failing.
 
 export function emailCanReachAnyRecipient(): boolean {
+  // Any SMTP provider (Gmail, Brevo, Mailjet, ...) can email anyone.
+  if (process.env.SMTP_HOST) return true;
+  // Resend can only reach anyone once a verified custom domain (not the shared
+  // @resend.dev sandbox sender) is configured.
   const from = process.env.NOTIFICATION_FROM_EMAIL ?? "";
   return Boolean(process.env.RESEND_API_KEY) && from.length > 0 && !from.includes("resend.dev");
 }

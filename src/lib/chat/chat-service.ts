@@ -8,6 +8,7 @@ import { handleConversationTurn } from "@/lib/chat/turn";
 import type { ChatRequest, ChatResponse } from "@/lib/chat/types";
 import { LoggingNotifier, type Notifier } from "@/lib/notifications/notifier";
 import { ResendNotifier } from "@/lib/notifications/resend-notifier";
+import { SmtpNotifier } from "@/lib/notifications/smtp-notifier";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
 
 // Wires the pieces together and picks real vs. in-memory implementations based
@@ -25,9 +26,13 @@ export function createChatService(overrides?: Partial<ChatServiceDeps>): ChatSer
     ? new SupabaseAccountRepository(db)
     : new InMemoryAccountRepository();
 
-  const notifier: Notifier = process.env.RESEND_API_KEY
-    ? new ResendNotifier()
-    : new LoggingNotifier();
+  // SMTP (Gmail/Brevo/etc.) can email any recipient, so prefer it; then Resend;
+  // otherwise log the (redacted) notification locally.
+  const notifier: Notifier = process.env.SMTP_HOST
+    ? new SmtpNotifier()
+    : process.env.RESEND_API_KEY
+      ? new ResendNotifier()
+      : new LoggingNotifier();
 
   return {
     parser: overrides?.parser ?? new HybridIntentParser(),
