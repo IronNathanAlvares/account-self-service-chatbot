@@ -171,6 +171,24 @@ export class InMemoryAccountRepository implements AccountRepository {
     ctx.callAppointments.push(appointment);
     return clone(appointment);
   }
+
+  async deletePromiseToPay(accountId: string, promiseId: string): Promise<void> {
+    const ctx = this.require(accountId);
+    ctx.promisesToPay = ctx.promisesToPay.filter((p) => p.id !== promiseId);
+  }
+
+  async deleteCallAppointment(accountId: string, appointmentId: string): Promise<void> {
+    const ctx = this.require(accountId);
+    ctx.callAppointments = ctx.callAppointments.filter((c) => c.id !== appointmentId);
+  }
+
+  async reversePayment(accountId: string, transactionId: string): Promise<void> {
+    const ctx = this.require(accountId);
+    const txn = ctx.transactions.find((t) => t.id === transactionId);
+    if (!txn) return;
+    ctx.account.balanceCents += txn.amountCents;
+    ctx.transactions = ctx.transactions.filter((t) => t.id !== transactionId);
+  }
 }
 
 export function defaultSeed(): AccountContext {

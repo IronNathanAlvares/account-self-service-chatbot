@@ -141,6 +141,14 @@ export class SupabaseAccountRepository implements AccountRepository {
     patch: Partial<RelatedPersonInput>,
   ): Promise<RelatedPerson> {
     const holderId = await this.holderId(accountId);
+    const { data: beforeRow } = await this.db
+      .from("related_people")
+      .select("*")
+      .eq("id", relatedPersonId)
+      .eq("account_holder_id", holderId)
+      .maybeSingle();
+    const before = beforeRow ? mapRelated(beforeRow as Row) : null;
+
     const row: Row = {};
     if (patch.name !== undefined) row.name = patch.name;
     if (patch.email !== undefined) row.email = patch.email;
@@ -158,19 +166,27 @@ export class SupabaseAccountRepository implements AccountRepository {
       .single();
     if (error) throw new Error(error.message);
     const person = mapRelated(data as Row);
-    await this.recordEvent(holderId, "update_related_person", `Updated ${person.name}`, null, person);
+    await this.recordEvent(holderId, "update_related_person", `Updated ${person.name}`, before, person);
     return person;
   }
 
   async removeRelatedPerson(accountId: string, relatedPersonId: string): Promise<void> {
     const holderId = await this.holderId(accountId);
+    const { data: beforeRow } = await this.db
+      .from("related_people")
+      .select("*")
+      .eq("id", relatedPersonId)
+      .eq("account_holder_id", holderId)
+      .maybeSingle();
+    const before = beforeRow ? mapRelated(beforeRow as Row) : null;
+
     const { error } = await this.db
       .from("related_people")
       .delete()
       .eq("id", relatedPersonId)
       .eq("account_holder_id", holderId);
     if (error) throw new Error(error.message);
-    await this.recordEvent(holderId, "remove_related_person", "Removed a related person", null, null);
+    await this.recordEvent(holderId, "remove_related_person", `Removed ${before?.name ?? "a related person"}`, before, null);
   }
 
   async createPromiseToPay(accountId: string, input: PromiseInput): Promise<PromiseToPay> {
@@ -236,6 +252,54 @@ export class SupabaseAccountRepository implements AccountRepository {
     const appointment = mapCall(data as Row);
     await this.recordEvent(holderId, "book_call_appointment", "Booked a call appointment", null, appointment);
     return appointment;
+  }
+
+  async deletePromiseToPay(accountId: string, promiseId: string): Promise<void> {
+    const holderId = await this.holderId(accountId);
+    const { error } = await this.db
+      .from("promises_to_pay")
+      .delete()
+      .eq("id", promiseId)
+      .eq("account_holder_id", holderId);
+    if (error) throw new Error(error.message);
+    await this.recordEvent(holderId, "undo", "Reverted a promise to pay", null, null);
+  }
+
+  async deleteCallAppointment(accountId: string, appointmentId: string): Promise<void> {
+    const holderId = await this.holderId(accountId);
+    const { error } = await this.db
+      .from("call_appointments")
+      .delete()
+      .eq("id", appointmentId)
+      .eq("account_holder_id", holderId);
+    if (error) throw new Error(error.message);
+    await this.recordEvent(holderId, "undo", "Reverted a call appointment", null, null);
+  }
+
+  async reversePayment(accountId: string, transactionId: string): Promise<void> {
+    const holderId = await this.holderId(accountId);
+    const { data: txn } = await this.db
+      .from("transactions")
+      .select("amount_cents")
+      .eq("id", transactionId)
+      .eq("account_holder_id", holderId)
+      .maybeSingle();
+    if (!txn) return;
+    const amount = n((txn as Row).amount_cents);
+
+    const { data: acct } = await this.db
+      .from("account_holders")
+      .select("balance_cents")
+      .eq("id", holderId)
+      .maybeSingle();
+    const newBalance = n((acct as Row).balance_cents) + amount;
+
+    await this.db
+      .from("account_holders")
+      .update({ balance_cents: newBalance, updated_at: new Date().toISOString() })
+      .eq("id", holderId);
+    await this.db.from("transactions").delete().eq("id", transactionId).eq("account_holder_id", holderId);
+    await this.recordEvent(holderId, "undo", `Reversed a payment of €${(amount / 100).toFixed(2)}`, null, null);
   }
 }
 

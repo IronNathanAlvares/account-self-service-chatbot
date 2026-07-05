@@ -18,6 +18,7 @@ const ACTION_LABELS: Record<string, string> = {
   create_promise_to_pay: "Promise to pay created",
   mock_payment: "Payment recorded",
   book_call_appointment: "Call appointment booked",
+  undo: "Change reverted",
 };
 
 export function AuditView({ accountId }: { accountId: string }) {
