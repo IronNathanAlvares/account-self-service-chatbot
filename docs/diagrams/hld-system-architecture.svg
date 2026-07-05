@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 640" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
+    </marker>
+    <style>
+      .lane   { fill:#f1f5f9; stroke:#cbd5e1; stroke-width:1.5; }
+      .lane-t { fill:#0f172a; font-size:13px; font-weight:700; letter-spacing:.5px; }
+      .box    { fill:#ffffff; stroke:#94a3b8; stroke-width:1.5; }
+      .box-ai { fill:#eef2ff; stroke:#6366f1; stroke-width:1.6; }
+      .box-db { fill:#ecfdf5; stroke:#10b981; stroke-width:1.6; }
+      .box-ext{ fill:#fff7ed; stroke:#f59e0b; stroke-width:1.6; }
+      .t      { fill:#0f172a; font-size:12.5px; font-weight:600; }
+      .s      { fill:#64748b; font-size:10.5px; }
+      .edge   { stroke:#475569; stroke-width:1.7; fill:none; marker-end:url(#arrow); }
+      .edge-d { stroke:#0ea5e9; stroke-width:1.5; fill:none; stroke-dasharray:5 4; marker-end:url(#arrow); }
+    </style>
+  </defs>
+
+  <text x="30" y="34" font-size="20" font-weight="700" fill="#0f172a">Account Self-Service Chatbot — High-Level Design</text>
+  <text x="30" y="54" class="s" font-size="12">Untrusted text in · deterministic, audited actions out · sensitive detail only in an encrypted PDF</text>
+
+  <!-- Client lane -->
+  <rect class="lane" x="30" y="80" width="250" height="520" rx="16"/>
+  <text class="lane-t" x="48" y="106">CLIENT (browser)</text>
+  <rect class="box" x="52" y="120" width="206" height="66" rx="10"/>
+  <text class="t" x="66" y="147">Next.js Account Portal</text>
+  <text class="s" x="66" y="166">Dashboard · Chat · React 19</text>
+  <rect class="box" x="52" y="206" width="206" height="66" rx="10"/>
+  <text class="t" x="66" y="233">Structured action cards</text>
+  <text class="s" x="66" y="252">receipts · diffs · confirm</text>
+  <rect class="box" x="52" y="292" width="206" height="66" rx="10"/>
+  <text class="t" x="66" y="319">Audit / explainability view</text>
+  <text class="s" x="66" y="338">message → intent → write</text>
+
+  <!-- Server lane -->
+  <rect class="lane" x="320" y="80" width="430" height="520" rx="16"/>
+  <text class="lane-t" x="338" y="106">SERVER · /api/chat (Node runtime)</text>
+
+  <rect class="box" x="345" y="118" width="380" height="46" rx="10"/>
+  <text class="t" x="360" y="139">API route — validate request, compose</text>
+  <text class="s" x="360" y="156">rejects empty input · no detail in errors</text>
+
+  <rect class="box-ai" x="345" y="176" width="380" height="54" rx="10"/>
+  <text class="t" x="360" y="198">Intent Parser (hybrid)</text>
+  <text class="s" x="360" y="216">rules + LLM → {action, fields, confidence}</text>
+
+  <rect class="box" x="345" y="242" width="380" height="48" rx="10"/>
+  <text class="t" x="360" y="264">Action Router — deterministic dispatch</text>
+  <text class="s" x="360" y="281">clarify / confirm / execute · LLM never writes</text>
+
+  <rect class="box" x="345" y="302" width="185" height="50" rx="10"/>
+  <text class="t" x="359" y="323">Validators (zod)</text>
+  <text class="s" x="359" y="341">email·phone·amount·date</text>
+  <rect class="box" x="540" y="302" width="185" height="50" rx="10"/>
+  <text class="t" x="554" y="323">Business services</text>
+  <text class="s" x="554" y="341">payment·promise·people</text>
+
+  <rect class="box" x="345" y="364" width="185" height="50" rx="10"/>
+  <text class="t" x="359" y="385">Account Repository</text>
+  <text class="s" x="359" y="403">interface → Supabase</text>
+  <rect class="box" x="540" y="364" width="185" height="50" rx="10"/>
+  <text class="t" x="554" y="385">Notification service</text>
+  <text class="s" x="554" y="403">boundary interface</text>
+
+  <rect class="box" x="345" y="426" width="185" height="50" rx="10"/>
+  <text class="t" x="359" y="447">Encrypted PDF builder</text>
+  <text class="s" x="359" y="465">pdf-lib + RC4 (pure JS)</text>
+  <rect class="box" x="540" y="426" width="185" height="50" rx="10"/>
+  <text class="t" x="554" y="447">Redacting logger</text>
+  <text class="s" x="554" y="465">masks email·phone·pwd</text>
+
+  <rect class="box" x="345" y="488" width="380" height="44" rx="10"/>
+  <text class="t" x="360" y="510">Audit writer → account_change_events</text>
+  <text class="s" x="360" y="526">before / after snapshot of every write</text>
+
+  <!-- External lane -->
+  <rect class="lane" x="790" y="80" width="240" height="520" rx="16"/>
+  <text class="lane-t" x="808" y="106">MANAGED SERVICES (free tier)</text>
+  <rect class="box-db" x="812" y="126" width="196" height="86" rx="10"/>
+  <text class="t" x="826" y="153">Supabase Postgres</text>
+  <text class="s" x="826" y="173">accounts · people · txns</text>
+  <text class="s" x="826" y="191">promises · calls · audit</text>
+  <rect class="box-ai" x="812" y="244" width="196" height="72" rx="10"/>
+  <text class="t" x="826" y="271">LLM API</text>
+  <text class="s" x="826" y="291">Claude Haiku (tool use)</text>
+  <rect class="box-ext" x="812" y="352" width="196" height="72" rx="10"/>
+  <text class="t" x="826" y="379">Resend</text>
+  <text class="s" x="826" y="399">generic email + PDF</text>
+
+  <!-- client <-> server -->
+  <path class="edge" d="M258 150 H345"/>
+  <text class="s" x="270" y="142">POST /api/chat</text>
+  <path class="edge-d" d="M345 138 C300 138 300 325 258 325"/>
+  <text class="s" x="215" y="420" transform="rotate(-90 215 420)">persisted state → UI</text>
+
+  <!-- server internal vertical flow -->
+  <path class="edge" d="M535 164 V176"/>
+  <path class="edge" d="M535 230 V242"/>
+  <path class="edge" d="M437 290 V302"/>
+  <path class="edge" d="M437 352 V364"/>
+  <path class="edge" d="M632 414 V426"/>
+  <path class="edge" d="M437 476 V488" opacity="0"/>
+
+  <!-- server -> external -->
+  <path class="edge-d" d="M530 389 C640 389 700 169 812 169"/>
+  <text class="s" x="612" y="250">read / write</text>
+  <path class="edge" d="M725 200 C760 200 780 265 812 275"/>
+  <text class="s" x="734" y="238">parse</text>
+  <path class="edge" d="M725 450 C760 450 780 400 812 392"/>
+  <text class="s" x="732" y="432">email+PDF</text>
+</svg>

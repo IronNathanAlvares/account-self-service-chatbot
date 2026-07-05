@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 640" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+    <marker id="ao" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#0ea5e9"/>
+    </marker>
+    <style>
+      .head { fill:#0f172a; rx:8; }
+      .ht   { fill:#ffffff; font-size:12px; font-weight:700; text-anchor:middle; }
+      .life { stroke:#cbd5e1; stroke-width:1.4; stroke-dasharray:4 4; }
+      .msg  { stroke:#334155; stroke-width:1.5; fill:none; marker-end:url(#a); }
+      .ret  { stroke:#0ea5e9; stroke-width:1.3; fill:none; marker-end:url(#ao); stroke-dasharray:5 4; }
+      .m    { fill:#0f172a; font-size:11.5px; }
+      .r    { fill:#0284c7; font-size:11px; }
+      .act  { fill:#e2e8f0; stroke:#94a3b8; stroke-width:1; }
+      .note { fill:#fef9c3; stroke:#eab308; stroke-width:1; rx:6; }
+      .nt   { fill:#713f12; font-size:11px; }
+    </style>
+  </defs>
+
+  <text x="24" y="30" font-size="18" font-weight="700" fill="#0f172a">LLD — Sequence: "Change my phone to +353831112233"</text>
+
+  <!-- actors -->
+  <g>
+    <rect class="head" x="40"  y="50" width="90"  height="34"/><text class="ht" x="85"  y="72">User</text>
+    <rect class="head" x="165" y="50" width="110" height="34"/><text class="ht" x="220" y="72">/api/chat</text>
+    <rect class="head" x="310" y="50" width="120" height="34"/><text class="ht" x="370" y="72">LLM Parser</text>
+    <rect class="head" x="470" y="50" width="120" height="34"/><text class="ht" x="530" y="72">Router+Validate</text>
+    <rect class="head" x="640" y="50" width="130" height="34"/><text class="ht" x="705" y="72">Repository (DB)</text>
+    <rect class="head" x="820" y="50" width="150" height="34"/><text class="ht" x="895" y="72">Notifier (Resend)</text>
+  </g>
+  <!-- lifelines -->
+  <line class="life" x1="85"  y1="84" x2="85"  y2="600"/>
+  <line class="life" x1="220" y1="84" x2="220" y2="600"/>
+  <line class="life" x1="370" y1="84" x2="370" y2="600"/>
+  <line class="life" x1="530" y1="84" x2="530" y2="600"/>
+  <line class="life" x1="705" y1="84" x2="705" y2="600"/>
+  <line class="life" x1="895" y1="84" x2="895" y2="600"/>
+
+  <path class="msg" d="M85 110 H218"/>
+  <text class="m" x="92" y="104">POST {accountId, message}</text>
+
+  <path class="msg" d="M220 140 H368"/>
+  <text class="m" x="228" y="134">parse(message)</text>
+  <path class="ret" d="M370 168 H222"/>
+  <text class="r" x="240" y="162">{action:update_account_holder, fields:{phone}, conf:0.96}</text>
+
+  <path class="msg" d="M220 198 H528"/>
+  <text class="m" x="300" y="192">route + validate phone (E.164)</text>
+
+  <rect class="note" x="470" y="212" width="240" height="34"/>
+  <text class="nt" x="482" y="233">invalid → reply, no write, no email</text>
+
+  <path class="msg" d="M530 272 H703"/>
+  <text class="m" x="540" y="266">updateAccountHolder(patch)  [txn]</text>
+  <path class="msg" d="M530 300 H703"/>
+  <text class="m" x="540" y="294">insert account_change_events (before/after)</text>
+  <path class="ret" d="M705 328 H532"/>
+  <text class="r" x="545" y="322">updated AccountContext</text>
+
+  <path class="msg" d="M530 360 H893"/>
+  <text class="m" x="600" y="354">send(changeSummary, snapshot)</text>
+
+  <rect class="note" x="800" y="374" width="200" height="66"/>
+  <text class="nt" x="812" y="393">1. build PDF (pdf-lib)</text>
+  <text class="nt" x="812" y="410">2. encrypt (pwd = phone last-4)</text>
+  <text class="nt" x="812" y="427">3. generic email + attachment</text>
+
+  <path class="msg" d="M895 462 H707"/>
+  <text class="m" x="720" y="456">insert notification_attempts</text>
+  <path class="ret" d="M895 490 H532"/>
+  <text class="r" x="620" y="484">{sent:true, redactedRecipient}</text>
+
+  <path class="ret" d="M530 520 H222"/>
+  <text class="r" x="300" y="514">ChatActionResult {success, account, notificationQueued}</text>
+
+  <path class="ret" d="M220 550 H87"/>
+  <text class="r" x="235" y="544">confirmation + live-refreshed dashboard</text>
+
+  <rect class="note" x="40" y="572" width="620" height="30"/>
+  <text class="nt" x="52" y="591">Logs are redacted throughout: no full phone/email, and never the PDF password.</text>
+</svg>

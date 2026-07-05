@@ -1,0 +1,61 @@
+import { Resend } from "resend";
+
+import type {
+  AccountChangeNotification,
+  AccountChangeNotificationResult,
+} from "@/lib/notifications/account-change-notification";
+import type { Notifier } from "@/lib/notifications/notifier";
+import { buildAccountPdf } from "@/lib/notifications/pdf/build-account-pdf";
+import { encryptPdf, pdfPasswordFromPhone } from "@/lib/notifications/pdf/encrypt-pdf";
+import { redactEmail } from "@/lib/redact";
+
+// Production notifier. Sends a GENERIC email (no sensitive detail in the body)
+// with the sensitive account summary as an ENCRYPTED PDF attachment.
+//
+// TODO(day-2): verify the encrypted PDF opens with the phone last-4 password in
+// a real deploy, and persist the outcome to notification_attempts.
+
+const GENERIC_BODY =
+  "There has been a change to your account. For your security, the details are in the attached PDF. Open it with the last 4 digits of the phone number on your account.";
+
+export class ResendNotifier implements Notifier {
+  private client: Resend;
+  private fromEmail: string;
+
+  constructor(opts?: { apiKey?: string; fromEmail?: string }) {
+    this.client = new Resend(opts?.apiKey ?? process.env.RESEND_API_KEY);
+    this.fromEmail =
+      opts?.fromEmail ??
+      process.env.NOTIFICATION_FROM_EMAIL ??
+      "Account Portal <notifications@example.test>";
+  }
+
+  async send(
+    notification: AccountChangeNotification,
+  ): Promise<AccountChangeNotificationResult> {
+    const ctx = notification.accountSnapshot;
+    const password = pdfPasswordFromPhone(ctx.account.phone);
+
+    const pdfBytes = await buildAccountPdf(ctx);
+    const encrypted = await encryptPdf(pdfBytes, password);
+
+    const { data } = await this.client.emails.send({
+      from: this.fromEmail,
+      to: ctx.account.email,
+      subject: "An update was made to your account",
+      text: GENERIC_BODY,
+      attachments: [
+        {
+          filename: "account-summary.pdf",
+          content: Buffer.from(encrypted),
+        },
+      ],
+    });
+
+    return {
+      notificationId: data?.id ?? `resend_${Date.now()}`,
+      sent: true,
+      redactedRecipient: redactEmail(ctx.account.email),
+    };
+  }
+}
