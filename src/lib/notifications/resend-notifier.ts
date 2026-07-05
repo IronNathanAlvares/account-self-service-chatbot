@@ -39,14 +39,15 @@ export class ResendNotifier implements Notifier {
     const pdfBytes = await buildAccountPdf(ctx);
     const encrypted = await encryptPdf(pdfBytes, password);
 
-    // Recipient precedence: dev test-override (so mail arrives in dev) > a
-    // per-send override such as a payment receipt email > the account email.
+    // Recipient precedence: a user-specified receipt email wins; otherwise the
+    // dev test-override redirects the (fake) account email to the owner;
+    // otherwise the account email itself.
     const recipient =
-      process.env.NOTIFICATION_TEST_OVERRIDE_EMAIL ||
       notification.recipientOverride ||
+      process.env.NOTIFICATION_TEST_OVERRIDE_EMAIL ||
       ctx.account.email;
 
-    const { data } = await this.client.emails.send({
+    const { data, error } = await this.client.emails.send({
       from: this.fromEmail,
       to: recipient,
       subject: "An update was made to your account",
@@ -59,10 +60,21 @@ export class ResendNotifier implements Notifier {
       ],
     });
 
+    if (error) {
+      // Never leak the address; a common cause is sending to a non-owner while
+      // still using Resend's shared onboarding@resend.dev sender.
+      console.error("[resend] send failed:", error.message);
+      return {
+        notificationId: `resend_error_${Date.now()}`,
+        sent: false,
+        redactedRecipient: redactEmail(recipient),
+      };
+    }
+
     return {
       notificationId: data?.id ?? `resend_${Date.now()}`,
       sent: true,
-      redactedRecipient: redactEmail(ctx.account.email),
+      redactedRecipient: redactEmail(recipient),
     };
   }
 }

@@ -33,18 +33,18 @@ The API route sets `export const runtime = "nodejs"` so `Buffer` and Resend work
 
 ## Alternatives considered
 
-- **`node-qpdf2`** — wraps the `qpdf` binary; supports AES-256. Rejected as the
+- **`node-qpdf2`** - wraps the `qpdf` binary; supports AES-256. Rejected as the
   default because it needs the qpdf binary bundled into the Lambda/Vercel
   function (a vendor layer), which is exactly the deployment risk we want to
   avoid. Keep as the upgrade path if AES-256 is ever required.
-- **`node-forge` / `crypto-js`** — large bundles (1.7 MB / 234 KB) and no PDF
+- **`node-forge` / `crypto-js`** - large bundles (1.7 MB / 234 KB) and no PDF
   object handling. Overkill.
-- **Hosted APIs (Cloudmersive, ConvertAPI, Apryse)** — would send account data
+- **Hosted APIs (Cloudmersive, ConvertAPI, Apryse)** - would send account data
   to a third party. Rejected on data-handling grounds.
 
 ## Honest caveat to put in the design note
 
-RC4-128 is weak by modern standards, and the password is only 4 digits — so the
+RC4-128 is weak by modern standards, and the password is only 4 digits - so the
 encryption is a *"can't casually open the attachment"* control, not strong
 cryptography. That matches the challenge intent (the PDF is a redaction boundary
 that keeps sensitive detail out of the email body), and it is worth stating the
@@ -59,6 +59,6 @@ tradeoff explicitly plus the AES-256/qpdf upgrade path.
 
 ## Sources
 
-- [node-qpdf2 — npm](https://www.npmjs.com/package/node-qpdf2)
-- [@pdfsmaller/pdf-encrypt-lite — npm](https://www.npmjs.com/package/@pdfsmaller/pdf-encrypt-lite)
-- [pdf-lib — npm](https://www.npmjs.com/package/pdf-lib)
+- [node-qpdf2 - npm](https://www.npmjs.com/package/node-qpdf2)
+- [@pdfsmaller/pdf-encrypt-lite - npm](https://www.npmjs.com/package/@pdfsmaller/pdf-encrypt-lite)
+- [pdf-lib - npm](https://www.npmjs.com/package/pdf-lib)

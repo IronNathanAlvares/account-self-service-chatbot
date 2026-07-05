@@ -21,7 +21,7 @@ export function redactSecret(secret: string): string {
 
 /**
  * Produce a log-safe summary of a change. Deliberately omits the actual new
- * values for sensitive fields — logs should say *what* changed, not the value.
+ * values for sensitive fields - logs should say *what* changed, not the value.
  */
 export function redactChangeSummary(summary: string): string {
   return summary

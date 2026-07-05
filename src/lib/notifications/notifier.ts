@@ -14,7 +14,7 @@ export interface Notifier {
 }
 
 /**
- * Local/dev + test-friendly notifier. Logs a REDACTED summary only — no email,
+ * Local/dev + test-friendly notifier. Logs a REDACTED summary only - no email,
  * no PDF, no sensitive values. Used automatically when Resend is not configured.
  */
 export class LoggingNotifier implements Notifier {

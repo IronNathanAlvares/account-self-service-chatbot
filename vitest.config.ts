@@ -10,7 +10,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // fileURLToPath keeps this correct on Windows (URL.pathname yields /C:/…).
+      // fileURLToPath keeps this correct on Windows (URL.pathname yields /C:/...).
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },

@@ -66,7 +66,7 @@ function createDefaultLlm(): IntentParser | null {
     });
   }
   // Ollama (local models, e.g. mistral / llama3.2 / qwen). Free, but only
-  // reachable where Ollama runs — great for local dev, not for a cloud deploy.
+  // reachable where Ollama runs - great for local dev, not for a cloud deploy.
   if (process.env.OLLAMA_MODEL) {
     return new OpenAICompatibleParser({
       baseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1",

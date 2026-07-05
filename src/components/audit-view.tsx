@@ -51,7 +51,7 @@ export function AuditView({ accountId }: { accountId: string }) {
             <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Change history</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
               Every change the assistant makes is recorded here with a before/after
-              snapshot — a full audit trail of what happened and why.
+              snapshot - a full audit trail of what happened and why.
             </p>
           </div>
           <button
@@ -67,7 +67,7 @@ export function AuditView({ accountId }: { accountId: string }) {
           {events.length === 0 ? (
             <div className="rounded-[1rem] border border-dashed border-slate-300 bg-slate-50/70 p-6 text-center text-sm text-slate-500">
               {loading
-                ? "Loading activity…"
+                ? "Loading activity..."
                 : "No changes yet. Update a detail or make a payment in the chat and it will appear here. (Requires Supabase to be configured.)"}
             </div>
           ) : (
@@ -119,7 +119,7 @@ function JsonBlock({ title, value }: { title: string; value: unknown }) {
     <div className="rounded-lg border border-slate-200 bg-white p-3">
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{title}</p>
       <pre className="max-h-40 overflow-auto text-[11px] leading-5 text-slate-600">
-        {value ? JSON.stringify(value, null, 2) : "—"}
+        {value ? JSON.stringify(value, null, 2) : "-"}
       </pre>
     </div>
   );

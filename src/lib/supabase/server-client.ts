@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Server-only Supabase client (the "admin" client that bypasses RLS). Supports
-// both the new API-key format (sb_secret_… / SUPABASE_SECRET_KEY) and the legacy
+// both the new API-key format (sb_secret_... / SUPABASE_SECRET_KEY) and the legacy
 // service-role JWT. This key must NEVER reach the browser: no NEXT_PUBLIC_
 // prefix, and this module must only be imported from server code.
 

@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-// Landing / mock sign-in. This is a visual gateway only — there is no real
+// Landing / mock sign-in. This is a visual gateway only - there is no real
 // authentication (the challenge explicitly excludes an auth system). Any
 // credentials continue into the demo account.
 
@@ -61,7 +61,7 @@ export default function LandingPage() {
             </h1>
             <p className="mt-4 max-w-md text-base leading-7 text-white/70">
               Read and update your details, make payments, set promises to pay,
-              and book calls — all in plain language.
+              and book calls - all in plain language.
             </p>
 
             <div className="mt-9 space-y-3">
@@ -127,13 +127,13 @@ export default function LandingPage() {
                   "bg-[linear-gradient(135deg,#0f1d3d,#2b4c8c)] hover:opacity-95",
                 )}
               >
-                {loading ? "Signing in…" : "Sign in"}
+                {loading ? "Signing in..." : "Sign in"}
                 {!loading && <ArrowRight className="size-4" />}
               </Button>
             </form>
 
             <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-3 text-center text-xs text-slate-500">
-              Demo access — no real authentication. Any credentials continue as
+              Demo access - no real authentication. Any credentials continue as
               <span className="font-medium text-slate-700"> Jane Murphy</span>.
             </div>
           </div>

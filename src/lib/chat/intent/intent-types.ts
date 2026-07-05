@@ -2,7 +2,7 @@ import type { ChatAction } from "@/lib/chat/types";
 
 /**
  * The structured output of the intent layer. The LLM (or the rule-based
- * fast-path) only ever produces one of these — it never touches the database.
+ * fast-path) only ever produces one of these - it never touches the database.
  * Deterministic code downstream validates `fields` and executes the action.
  */
 export type ParsedIntent = {

@@ -2,13 +2,13 @@ import type { ChatAction } from "@/lib/chat/types";
 import type { IntentParser, ParsedIntent, ParseContext } from "./intent-types";
 
 // Provider-agnostic LLM parser that speaks the OpenAI Chat Completions API.
-// Works with any OpenAI-compatible endpoint — including several FREE ones:
+// Works with any OpenAI-compatible endpoint - including several FREE ones:
 //   Groq       base https://api.groq.com/openai/v1        model llama-3.3-70b-versatile
 //   OpenRouter base https://openrouter.ai/api/v1          model meta-llama/llama-3.3-70b-instruct:free
 //   Gemini     base https://generativelanguage.googleapis.com/v1beta/openai  model gemini-2.0-flash
 //   OpenAI     base https://api.openai.com/v1             model gpt-4o-mini
 //
-// Like the Anthropic parser, it ONLY classifies — it returns a structured
+// Like the Anthropic parser, it ONLY classifies - it returns a structured
 // intent and never touches the database.
 
 const ACTIONS: ChatAction[] = [

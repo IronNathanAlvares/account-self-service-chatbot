@@ -36,7 +36,7 @@ src/app/api/chat/route.ts          wired to handleChat() (Node runtime)
 ## Design rules baked in
 
 1. **The LLM only classifies.** It returns `{action, fields, confidence}` and
-   never executes a write — the deterministic router + validators do. This is
+   never executes a write - the deterministic router + validators do. This is
    also the prompt-injection defense.
 2. **Everything I/O is an interface.** `AccountRepository` and `Notifier` let the
    whole action core run in tests with zero external services.

@@ -3,7 +3,7 @@ import type { AccountHolder, RelatedPerson } from "@/lib/account/types";
 import type { RouterDeps } from "@/lib/chat/router/action-router";
 import type { ChatActionResult } from "@/lib/chat/types";
 
-// "Undo that" — reverts the most recent change using the audit trail. Safe by
+// "Undo that" - reverts the most recent change using the audit trail. Safe by
 // design: only non-financial changes with a recoverable snapshot are undone;
 // anything else (payments, etc.) is declined with an explanation. Requires the
 // Supabase-backed repository (the audit trail lives in the database).
@@ -33,7 +33,7 @@ export async function undoLastChange(accountId: string, deps: RouterDeps): Promi
     });
     const account = (await deps.repo.getAccountContext(accountId)) ?? undefined;
     const queued = await notify("Reverted the last account detail change");
-    return { action: "update_account_holder", success: true, reply: "Done — I've reverted your most recent account detail change.", account, notificationQueued: queued };
+    return { action: "update_account_holder", success: true, reply: "Done - I've reverted your most recent account detail change.", account, notificationQueued: queued };
   }
 
   if (event.action === "add_related_person" && event.after) {
@@ -41,7 +41,7 @@ export async function undoLastChange(accountId: string, deps: RouterDeps): Promi
     if (person.id) {
       await deps.repo.removeRelatedPerson(accountId, person.id);
       const queued = await notify(`Removed ${person.name} (undo of add)`);
-      return { action: "remove_related_person", success: true, reply: `Done — I've removed ${person.name}, undoing the last change.`, notificationQueued: queued };
+      return { action: "remove_related_person", success: true, reply: `Done - I've removed ${person.name}, undoing the last change.`, notificationQueued: queued };
     }
   }
 

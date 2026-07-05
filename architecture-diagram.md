@@ -5,12 +5,12 @@ diagrams (system, request pipeline, sequence, ER model) are in
 [docs/diagrams](./docs/diagrams).
 
 **Core principle:** free customer text enters the parser, but only
-deterministic, validated code ever writes to the database or sends email — the
+deterministic, validated code ever writes to the database or sends email - the
 LLM classifies, it never acts.
 
 ```mermaid
 flowchart TB
-  subgraph Client["Browser — Next.js / React"]
+  subgraph Client["Browser - Next.js / React"]
     UI["Account portal<br/>(dashboard · activity · floating chat)"]
   end
 
@@ -28,7 +28,7 @@ flowchart TB
 
   subgraph External["Managed services (free tier)"]
     DB[("Supabase Postgres<br/>+ audit + payment RPC")]
-    LLM["LLM API<br/>(Groq / Gemini / Ollama / …)"]
+    LLM["LLM API<br/>(Groq / Gemini / Ollama / ...)"]
     Email["Resend"]
   end
 

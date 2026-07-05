@@ -2,7 +2,7 @@
 
 The app uses **Supabase Postgres**. It's already wired into the starter, the
 reviewers seeded a migration for it, and the free tier (500 MB DB, unlimited API
-requests, Realtime) is plenty. Two ways to run it — do **local** for day-to-day
+requests, Realtime) is plenty. Two ways to run it - do **local** for day-to-day
 dev, then create a **hosted** project for the deployed app.
 
 ---
@@ -83,7 +83,7 @@ supabase migration new add_audit_and_conversations   # scaffold a new migration
 
 ## 3. Environment variables
 
-`.env.local` (never commit real values — `.env*.local` is already gitignored):
+`.env.local` (never commit real values - `.env*.local` is already gitignored):
 
 ```bash
 # Browser client (safe to expose)
@@ -93,7 +93,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<anon key>
 # Server-only client used by /api/chat for writes. NO NEXT_PUBLIC prefix.
 SUPABASE_SERVICE_ROLE_KEY=<service_role key>
 
-# Email + LLM (optional locally — app falls back to logging + rule parser)
+# Email + LLM (optional locally - app falls back to logging + rule parser)
 RESEND_API_KEY=re_...
 NOTIFICATION_FROM_EMAIL=Account Portal <notifications@yourdomain>
 ANTHROPIC_API_KEY=sk-ant-...
@@ -111,11 +111,11 @@ ANTHROPIC_API_KEY=sk-ant-...
 The starter migration (`supabase/migrations/20260630123000_account_chat_starter.sql`)
 gives you 7 tables. Planned additions (see the ERD in `docs/diagrams/`):
 
-- **`account_change_events`** — `before`/`after` JSONB per write. Powers the
+- **`account_change_events`** - `before`/`after` JSONB per write. Powers the
   audit view and an undo feature.
-- **`conversations` + `chat_messages`** — persist slot-filling state and the
+- **`conversations` + `chat_messages`** - persist slot-filling state and the
   parsed intent per message (serverless functions are stateless).
-- **`transactions.idempotency_key`** (unique) — stops a retried "pay €150" from
+- **`transactions.idempotency_key`** (unique) - stops a retried "pay €150" from
   double-charging.
 
 ### Make the mocked payment atomic

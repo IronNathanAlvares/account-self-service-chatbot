@@ -155,7 +155,7 @@ export async function handleIntent(
       if (lastName !== undefined) patch.lastName = lastName;
 
       if (Object.keys(patch).length === 0) {
-        return needInfo("update_account_holder", fields, "What would you like to change — your name, email, phone, or address?", ["field"]);
+        return needInfo("update_account_holder", fields, "What would you like to change - your name, email, phone, or address?", ["field"]);
       }
 
       const updated = await repo.updateAccountHolder(accountId, patch);
@@ -223,12 +223,12 @@ export async function handleIntent(
       if (authorized !== undefined) patch.authorizedToAct = authorized;
 
       if (Object.keys(patch).length === 0) {
-        return needInfo("update_related_person", { ...fields, relatedPersonName: person.name }, `What would you like to change about ${person.name} — their phone, email, relationship, or authorization?`, ["field"]);
+        return needInfo("update_related_person", { ...fields, relatedPersonName: person.name }, `What would you like to change about ${person.name} - their phone, email, relationship, or authorization?`, ["field"]);
       }
 
       const updated = await repo.updateRelatedPerson(accountId, person.id, patch);
       const queued = await notify(`Updated related person ${person.name}: ${Object.keys(patch).join(", ")}`);
-      return ok("update_related_person", `Done — I've updated ${updated.name}'s ${Object.keys(patch).join(", ")}.`, { notificationQueued: queued });
+      return ok("update_related_person", `Done - I've updated ${updated.name}'s ${Object.keys(patch).join(", ")}.`, { notificationQueued: queued });
     }
 
     case "remove_related_person": {
@@ -246,7 +246,7 @@ export async function handleIntent(
         return {
           action: "remove_related_person",
           success: false,
-          reply: `Just to confirm — remove ${person.name} from your account? This can't be undone from here.`,
+          reply: `Just to confirm - remove ${person.name} from your account? This can't be undone from here.`,
           requiresConfirmation: true,
           pending: { action: "remove_related_person", fields: { relatedPersonName: person.name }, stage: "confirm" },
         };
@@ -273,7 +273,7 @@ export async function handleIntent(
       }
       const promise = await repo.createPromiseToPay(accountId, { amountCents: amountCents!, dueDate: dueDate! });
       const queued = await notify(`Created a promise to pay of ${formatCents(amountCents!, context.account.currency)} due ${dueDate}`);
-      return ok("create_promise_to_pay", `Got it — I've recorded a promise to pay ${formatCents(promise.amountCents, promise.currency)} on ${promise.dueDate}.`, { promiseToPay: promise, notificationQueued: queued });
+      return ok("create_promise_to_pay", `Got it - I've recorded a promise to pay ${formatCents(promise.amountCents, promise.currency)} on ${promise.dueDate}.`, { promiseToPay: promise, notificationQueued: queued });
     }
 
     // ---- mocked payment ----------------------------------------------------
@@ -292,7 +292,7 @@ export async function handleIntent(
       let receiptEmail = givenReceipt ?? remembered ?? context.account.email;
       if (givenReceipt) {
         const v = validate(emailSchema, givenReceipt);
-        if (!v.ok) return fail("mock_payment", "That receipt email doesn't look right — try again, or say 'yes' to use the one on file.");
+        if (!v.ok) return fail("mock_payment", "That receipt email doesn't look right - try again, or say 'yes' to use the one on file.");
         receiptEmail = v.value;
       }
 
@@ -336,7 +336,7 @@ export async function handleIntent(
 
     // ---- fallbacks ---------------------------------------------------------
     case "clarify":
-      return fail("clarify", "I want to make sure I get this right — could you give me a little more detail?");
+      return fail("clarify", "I want to make sure I get this right - could you give me a little more detail?");
     default:
       return fail("unsupported", "I can help with your account details, related people, promises to pay, payments, transactions, and call bookings. What would you like to do?");
   }

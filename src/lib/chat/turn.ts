@@ -46,7 +46,7 @@ export async function handleConversationTurn(
 
     const isCorrection = CORRECTION_WORD.test(message) || (/\d/.test(message) && !yes);
     if (isCorrection) {
-      // e.g. "no, make it 200" — re-parse with context and re-confirm the new value.
+      // e.g. "no, make it 200" - re-parse with context and re-confirm the new value.
       const parsed = await parser.parse(message, { pendingAction: pending.action, pendingFields: pending.fields });
       const sameAction = parsed.action === pending.action;
       const intent: ParsedIntent = {
@@ -58,7 +58,7 @@ export async function handleConversationTurn(
       return handleIntent(accountId, intent, deps, opts);
     }
     if (NO.test(message)) {
-      return { action: pending.action, success: false, reply: "No problem — I've cancelled that. Anything else I can help with?" };
+      return { action: pending.action, success: false, reply: "No problem - I've cancelled that. Anything else I can help with?" };
     }
     if (yes) {
       const intent: ParsedIntent = { action: pending.action, fields: pending.fields, confidence: 1, rawMessage: message };
