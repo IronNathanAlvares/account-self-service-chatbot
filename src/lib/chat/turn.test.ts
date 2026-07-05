@@ -4,6 +4,7 @@ import { InMemoryAccountRepository } from "@/lib/account/in-memory-repository";
 import type { IntentParser, ParseContext, ParsedIntent } from "@/lib/chat/intent/intent-types";
 import type { RouterDeps } from "@/lib/chat/router/action-router";
 import { handleConversationTurn } from "@/lib/chat/turn";
+import { undoLastChange } from "@/lib/chat/undo";
 import type { ChatAction } from "@/lib/chat/types";
 import { RecordingNotifier } from "@/lib/notifications/notifier";
 
@@ -88,5 +89,30 @@ describe("handleConversationTurn", () => {
     expect(notifier.calls).toHaveLength(0);
     const ctx = await repo.getAccountContext(ACCOUNT_ID);
     expect(ctx?.transactions.every((t) => t.description !== "Mocked card payment")).toBe(true);
+  });
+
+  it("remembers the receipt email across payments", async () => {
+    const parser = new StubParser(() => intent("mock_payment", { amountCents: 5000 }));
+    const ask1 = await handleConversationTurn(ACCOUNT_ID, "pay 50 now", undefined, parser, deps);
+    expect(ask1.pending?.fields.receiptEmail).toBe("jane.murphy@example.test");
+    const done1 = await handleConversationTurn(ACCOUNT_ID, "yes", ask1.pending, parser, deps);
+    expect(done1.sessionMemory?.receiptEmail).toBe("jane.murphy@example.test");
+
+    const ask2 = await handleConversationTurn(ACCOUNT_ID, "pay 25 now", undefined, parser, deps, done1.sessionMemory);
+    expect(ask2.reply.toLowerCase()).toContain("same as last time");
+  });
+
+  it("lets you set a new receipt email during confirmation", async () => {
+    const parser = new StubParser(() => intent("mock_payment", { amountCents: 5000 }));
+    const ask = await handleConversationTurn(ACCOUNT_ID, "pay 50 now", undefined, parser, deps);
+    const done = await handleConversationTurn(ACCOUNT_ID, "send it to receipts@example.test", ask.pending, parser, deps);
+    expect(done.success).toBe(true);
+    expect(done.sessionMemory?.receiptEmail).toBe("receipts@example.test");
+  });
+
+  it("reports nothing to undo without an audit trail (in-memory)", async () => {
+    const result = await undoLastChange(ACCOUNT_ID, deps);
+    expect(result.success).toBe(false);
+    expect(result.reply.toLowerCase()).toContain("nothing to undo");
   });
 });

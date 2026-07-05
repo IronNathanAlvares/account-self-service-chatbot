@@ -45,6 +45,7 @@ export async function handleChat(
     request.pending,
     deps.parser,
     deps.router,
+    request.sessionMemory,
   );
 
   return {

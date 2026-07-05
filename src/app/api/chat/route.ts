@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       message,
       conversationId: body.conversationId,
       pending: body.pending,
+      sessionMemory: body.sessionMemory,
     });
     return NextResponse.json(response, { status: 200 });
   } catch (error) {

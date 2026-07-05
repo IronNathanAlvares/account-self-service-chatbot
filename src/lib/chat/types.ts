@@ -41,6 +41,12 @@ export type ChatPendingState = {
   stage: "collect" | "confirm";
 };
 
+// Lightweight per-conversation memory the client carries back each turn, so the
+// assistant can adapt (e.g. remember the last receipt email and offer to reuse).
+export type ChatSessionMemory = {
+  receiptEmail?: string;
+};
+
 export type ChatActionResult = {
   action: ChatAction;
   success: boolean;
@@ -59,6 +65,8 @@ export type ChatActionResult = {
   pending?: ChatPendingState;
   /** When true, the client should show Yes/No confirm buttons. */
   requiresConfirmation?: boolean;
+  /** Updated session memory the client should persist and send back. */
+  sessionMemory?: ChatSessionMemory;
 };
 
 export type ChatRequest = {
@@ -66,6 +74,7 @@ export type ChatRequest = {
   message: string;
   conversationId?: string;
   pending?: ChatPendingState;
+  sessionMemory?: ChatSessionMemory;
 };
 
 export type ChatResponse = {

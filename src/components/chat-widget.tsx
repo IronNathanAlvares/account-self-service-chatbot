@@ -21,7 +21,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import type { AccountContext } from "@/lib/account/types";
-import type { ChatActionResult, ChatPendingState, ChatResponse } from "@/lib/chat/types";
+import type { ChatActionResult, ChatPendingState, ChatResponse, ChatSessionMemory } from "@/lib/chat/types";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +51,7 @@ export function ChatWidget({
   const [isSending, setIsSending] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [pending, setPending] = useState<ChatPendingState | undefined>(undefined);
+  const [sessionMemory, setSessionMemory] = useState<ChatSessionMemory>({});
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export function ChatWidget({
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId, message, pending }),
+        body: JSON.stringify({ accountId, message, pending, sessionMemory }),
       });
       const body = (await response.json()) as ChatResponse | { error?: string };
       const reply =
@@ -79,8 +80,11 @@ export function ChatWidget({
           : body.error ?? "The assistant did not return a usable response.";
       const result = "result" in body ? body.result : undefined;
 
-      // Carry any multi-turn state (slot-filling / awaiting confirmation) forward.
+      // Carry multi-turn + session state forward (merge, don't overwrite memory).
       setPending(result?.pending);
+      if (result?.sessionMemory) {
+        setSessionMemory((prev) => ({ ...prev, ...result.sessionMemory }));
+      }
       setMessages((m) => [...m, { id: `a-${sentAt + 1}`, role: "agent", content: reply, result }]);
 
       // Live-refresh the dashboard from persisted state after any successful action.
@@ -147,6 +151,7 @@ export function ChatWidget({
             onClick={() => {
               setMessages([]);
               setPending(undefined);
+              setSessionMemory({});
             }}
             title="Start a new conversation"
             className="ml-auto flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/20"

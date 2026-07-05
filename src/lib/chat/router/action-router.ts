@@ -1,6 +1,6 @@
 import type { AccountContext } from "@/lib/account/types";
 import type { AccountRepository, AccountHolderPatch } from "@/lib/account/repository";
-import type { ChatAction, ChatActionResult, ChatPendingState } from "@/lib/chat/types";
+import type { ChatAction, ChatActionResult, ChatPendingState, ChatSessionMemory } from "@/lib/chat/types";
 import type { ParsedIntent } from "@/lib/chat/intent/intent-types";
 import { formatCents } from "@/lib/money";
 import type { Notifier } from "@/lib/notifications/notifier";
@@ -95,7 +95,7 @@ export async function handleIntent(
   accountId: string,
   intent: ParsedIntent,
   deps: RouterDeps,
-  options: { confirmed?: boolean } = {},
+  options: { confirmed?: boolean; sessionMemory?: ChatSessionMemory } = {},
 ): Promise<ChatActionResult> {
   const { repo, notifier } = deps;
   const { action, fields } = intent;
@@ -106,13 +106,14 @@ export async function handleIntent(
   }
 
   // Fetches the freshest snapshot and sends the redacted change notification.
-  const notify = async (changeSummary: string): Promise<boolean> => {
+  const notify = async (changeSummary: string, recipientOverride?: string): Promise<boolean> => {
     const snapshot = (await repo.getAccountContext(accountId)) ?? context;
     const result = await notifier.send({
       accountId,
       changedBy: "account_holder",
       changeSummary,
       accountSnapshot: snapshot,
+      recipientOverride,
     });
     return result.sent || result.notificationId.length > 0;
   };
@@ -284,14 +285,28 @@ export async function handleIntent(
         return fail("mock_payment", `That's more than your balance of ${formatCents(context.account.balanceCents, context.account.currency)}. Try an amount up to your balance.`);
       }
 
+      // Where the receipt goes: an email given this turn, else one remembered
+      // from a previous payment, else the account email.
+      const remembered = options.sessionMemory?.receiptEmail;
+      const givenReceipt = str(fields, "receiptEmail");
+      let receiptEmail = givenReceipt ?? remembered ?? context.account.email;
+      if (givenReceipt) {
+        const v = validate(emailSchema, givenReceipt);
+        if (!v.ok) return fail("mock_payment", "That receipt email doesn't look right — try again, or say 'yes' to use the one on file.");
+        receiptEmail = v.value;
+      }
+
       // Two-phase confirm: never take a payment without an explicit "yes".
       if (!options.confirmed) {
+        const note = remembered
+          ? `I'll email the receipt to ${remembered} (same as last time). Reply 'yes' to confirm, or send a new email address.`
+          : `I'll email the receipt to ${receiptEmail}. Reply 'yes' to confirm, or send a different email for the receipt.`;
         return {
           action: "mock_payment",
           success: false,
-          reply: `You're about to pay ${formatCents(amountCents, context.account.currency)} now using the card on file. Shall I go ahead?`,
+          reply: `You're about to pay ${formatCents(amountCents, context.account.currency)} now using the card on file. ${note}`,
           requiresConfirmation: true,
-          pending: { action: "mock_payment", fields: { amountCents }, stage: "confirm" },
+          pending: { action: "mock_payment", fields: { amountCents, receiptEmail }, stage: "confirm" },
         };
       }
 
@@ -299,8 +314,8 @@ export async function handleIntent(
         amountCents,
         idempotencyKey: str(fields, "idempotencyKey"),
       });
-      const queued = await notify(`Recorded a payment of ${formatCents(amountCents, context.account.currency)}`);
-      return ok("mock_payment", `Payment of ${formatCents(amountCents, account.account.currency)} taken using the card on file. Your new balance is ${formatCents(account.account.balanceCents, account.account.currency)}.`, { transaction, account, notificationQueued: queued });
+      const queued = await notify(`Recorded a payment of ${formatCents(amountCents, context.account.currency)}`, receiptEmail);
+      return ok("mock_payment", `Payment of ${formatCents(amountCents, account.account.currency)} taken using the card on file. Your new balance is ${formatCents(account.account.balanceCents, account.account.currency)}. Receipt sent to ${receiptEmail}.`, { transaction, account, notificationQueued: queued, sessionMemory: { receiptEmail } });
     }
 
     // ---- call appointment --------------------------------------------------

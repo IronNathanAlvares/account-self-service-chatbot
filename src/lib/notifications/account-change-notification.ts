@@ -5,6 +5,8 @@ export type AccountChangeNotification = {
   changedBy: "account_holder" | "authorized_representative";
   changeSummary: string;
   accountSnapshot: AccountContext;
+  /** Optional recipient override (e.g. a payment receipt email) for this send. */
+  recipientOverride?: string;
 };
 
 export type AccountChangeNotificationResult = {
