@@ -7,7 +7,7 @@ Every change is persisted, audited, and confirmed by email with an encrypted PDF
 
 **🔗 Live demo:** https://account-self-service-chatbot.vercel.app/
 **🏗️ Architecture:** [architecture-diagram.md](./architecture-diagram.md) · detailed HLD/LLD in [docs/diagrams](./docs/diagrams)
-**🎬 Demo video:** _coming soon_
+**🎬 Demo video:** [watch the walkthrough](https://github.com/IronNathanAlvares/account-self-service-chatbot/releases/download/demo-v1/demo-video.mp4)
 
 > Built on the PayPathIQ starter template. Sign in is a **mock gateway** (no real
 > auth, per the brief) - any credentials continue as the demo account.
@@ -16,12 +16,16 @@ Every change is persisted, audited, and confirmed by email with an encrypted PDF
 
 ## Demo video
 
-_A short walkthrough will be linked here._
+A full walkthrough is hosted as a GitHub release asset (about 200 MB, so it is
+attached to the release rather than committed to the repo):
 
-<!-- TODO: record a ~5 minute walkthrough (sign in -> a read -> an update with
-validation -> add a person via slot-filling -> a payment with the confirmation
-gate and a custom receipt email -> a booking -> the Activity/audit tab), then
-paste the link above and here. -->
+**[Watch the demo video](https://github.com/IronNathanAlvares/account-self-service-chatbot/releases/download/demo-v1/demo-video.mp4)**
+&nbsp;·&nbsp; [release page](https://github.com/IronNathanAlvares/account-self-service-chatbot/releases/tag/demo-v1)
+
+It covers reads, updates with validation, related people with slot-filling, a
+mocked payment with the confirmation gate and a custom receipt email, a promise
+to pay, a booking, the encrypted-PDF email, the audit trail, and undo (including
+that it deliberately refuses to reverse a payment).
 
 ---
 

@@ -41,3 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# demo video is hosted as a GitHub Release asset, not committed
+*.mp4
+public/*.mp4
